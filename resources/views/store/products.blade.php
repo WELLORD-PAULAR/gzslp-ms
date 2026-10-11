@@ -9,10 +9,38 @@
         <p class="mt-3 max-w-2xl text-gray-600">Browse the products currently available from our print shop.</p>
     </section>
 
+    <form class="mt-6 flex flex-wrap items-end gap-3 border-y border-gray-200 py-5" method="GET" action="{{ route('products.index') }}">
+        <div class="min-w-48 flex-1">
+            <label class="block text-sm font-medium" for="search">Search products</label>
+            <input class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="search" name="search" value="{{ request('search') }}" type="search">
+        </div>
+        <div>
+            <label class="block text-sm font-medium" for="paper_size">Paper size</label>
+            <select class="mt-1 rounded border border-gray-300 px-3 py-2" id="paper_size" name="paper_size">
+                <option value="">All sizes</option>
+                @foreach ($paperSizes as $paperSize)<option value="{{ $paperSize }}" @selected(request('paper_size') === $paperSize)>{{ $paperSize }}</option>@endforeach
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium" for="paper_finish">Finish</label>
+            <select class="mt-1 rounded border border-gray-300 px-3 py-2" id="paper_finish" name="paper_finish">
+                <option value="">All finishes</option>
+                @foreach ($paperFinishes as $paperFinish)<option value="{{ $paperFinish }}" @selected(request('paper_finish') === $paperFinish)>{{ $paperFinish }}</option>@endforeach
+            </select>
+        </div>
+        <button class="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white" type="submit">Filter</button>
+        <a class="px-2 py-2 text-sm underline" href="{{ route('products.index') }}">Clear</a>
+    </form>
+
+    @error('quantity')
+        <p class="mt-5 border-l-4 border-red-700 bg-white px-4 py-3 text-sm text-red-800" role="alert">{{ $message }}</p>
+    @enderror
+
     <section class="mt-8 grid gap-x-8 sm:grid-cols-2" aria-label="Available products">
         @forelse ($products as $product)
             <article class="border-y border-gray-200 py-6">
-                <h2 class="text-xl font-semibold">{{ $product->name }}</h2>
+                @if ($product->image_path)<img class="mb-4 aspect-[4/3] w-full max-w-lg rounded border border-gray-200 object-cover" src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($product->image_path) }}" alt="{{ $product->name }}">@endif
+                <h2 class="text-xl font-semibold"><a class="underline decoration-transparent hover:decoration-current" href="{{ route('products.show', $product) }}">{{ $product->name }}</a></h2>
                 @if ($product->description)
                     <p class="mt-2 text-gray-600">{{ $product->description }}</p>
                 @endif
@@ -24,9 +52,20 @@
                     </p>
                 @endif
                 <p class="mt-4 font-medium">{{ number_format((float) $product->price, 2) }}</p>
+                <form class="mt-4 flex items-end gap-3" method="POST" action="{{ route('cart.items.store') }}">
+                    @csrf
+                    <input name="item_type" type="hidden" value="product">
+                    <input name="item_id" type="hidden" value="{{ $product->id }}">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600" for="quantity-{{ $product->id }}">Quantity</label>
+                        <input class="mt-1 w-20 rounded border border-gray-300 px-2 py-1.5" id="quantity-{{ $product->id }}" name="quantity" type="number" min="1" max="99" value="1" required>
+                    </div>
+                    <button class="rounded bg-emerald-800 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-900" type="submit">Add to cart</button>
+                </form>
             </article>
         @empty
             <p class="border-y border-gray-200 py-8 text-gray-600">There are no products available right now.</p>
         @endforelse
     </section>
+    <div class="mt-6">{{ $products->links() }}</div>
 @endsection

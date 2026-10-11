@@ -11,7 +11,7 @@ class StoreProductRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->can('access-admin') ?? false;
+        return $this->user()?->can('manage-shop') ?? false;
     }
 
     public function rules(): array
@@ -23,6 +23,7 @@ class StoreProductRequest extends FormRequest
             'paper_size' => ['nullable', 'string', 'max:80'],
             'paper_weight' => ['nullable', 'string', 'max:80'],
             'paper_finish' => ['nullable', 'string', 'max:80'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'is_active' => ['sometimes', 'boolean'],
         ];
     }

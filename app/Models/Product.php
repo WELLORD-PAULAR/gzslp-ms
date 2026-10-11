@@ -13,6 +13,7 @@ class Product extends Model
         'paper_size',
         'paper_weight',
         'paper_finish',
+        'image_path',
         'is_active',
     ];
 
@@ -21,6 +22,7 @@ class Product extends Model
         return [
             'price' => 'decimal:2',
             'is_active' => 'boolean',
+            'lock_version' => 'integer',
         ];
     }
 }

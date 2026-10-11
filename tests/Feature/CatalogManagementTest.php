@@ -4,6 +4,8 @@ use App\Models\Product;
 use App\Models\Service;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
 
@@ -36,6 +38,7 @@ test('an admin can create edit and delete a product', function () {
         'paper_weight' => '200 gsm',
         'paper_finish' => 'Gloss',
         'is_active' => '0',
+        'lock_version' => 0,
     ])->assertRedirect(route('admin.products.index'));
 
     $this->assertDatabaseHas('products', [
@@ -75,6 +78,7 @@ test('an admin can create edit and delete a service', function () {
         'description' => 'Design assistance and printing.',
         'starting_price' => '25.00',
         'is_active' => '1',
+        'lock_version' => 0,
     ])->assertRedirect(route('admin.services.index'));
 
     $this->assertDatabaseHas('services', [
@@ -153,4 +157,69 @@ test('catalog forms reject invalid prices and missing names', function () {
             'name' => '',
         ])
         ->assertSessionHasErrors('name');
+});
+
+test('a stale service edit is rejected instead of overwriting the first edit', function () {
+    $admin = User::factory()->create();
+    $admin->forceFill(['role' => User::ROLE_ADMIN])->save();
+    $service = Service::create([
+        'name' => 'Original service',
+        'starting_price' => '10.00',
+        'is_active' => true,
+    ]);
+
+    $this->actingAs($admin)
+        ->put(route('admin.services.update', $service), [
+            'name' => 'First edit',
+            'starting_price' => '12.00',
+            'is_active' => '1',
+            'lock_version' => 0,
+        ])
+        ->assertRedirect(route('admin.services.index'));
+
+    $this->from(route('admin.services.edit', $service))
+        ->put(route('admin.services.update', $service), [
+            'name' => 'Stale edit',
+            'starting_price' => '15.00',
+            'is_active' => '1',
+            'lock_version' => 0,
+        ])
+        ->assertSessionHasErrors('conflict');
+
+    expect($service->fresh()->name)->toBe('First edit')
+        ->and($service->fresh()->starting_price)->toBe('12.00')
+        ->and($service->fresh()->lock_version)->toBe(1);
+});
+
+test('catalog image uploads are public and replaced or deleted files are cleaned up', function () {
+    Storage::fake('public');
+    $admin = User::factory()->create();
+    $admin->forceFill(['role' => User::ROLE_ADMIN])->save();
+
+    $this->actingAs($admin)
+        ->post(route('admin.products.store'), [
+            'name' => 'Poster',
+            'price' => '20.00',
+            'is_active' => '1',
+            'image' => UploadedFile::fake()->image('poster.png'),
+        ])->assertRedirect(route('admin.products.index'));
+
+    $product = Product::firstOrFail();
+    $originalImage = $product->image_path;
+    Storage::disk('public')->assertExists($originalImage);
+
+    $this->put(route('admin.products.update', $product), [
+        'name' => 'Poster',
+        'price' => '20.00',
+        'is_active' => '1',
+        'lock_version' => 0,
+        'image' => UploadedFile::fake()->image('replacement.png'),
+    ])->assertRedirect(route('admin.products.index'));
+
+    $product->refresh();
+    Storage::disk('public')->assertMissing($originalImage);
+    Storage::disk('public')->assertExists($product->image_path);
+
+    $this->delete(route('admin.products.destroy', $product))->assertRedirect(route('admin.products.index'));
+    Storage::disk('public')->assertMissing($product->image_path);
 });

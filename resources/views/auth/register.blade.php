@@ -14,6 +14,12 @@
     </div>
 
     <div>
+        <label class="block text-sm font-medium" for="phone">Phone number <span class="font-normal text-gray-500">(optional)</span></label>
+        <input class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="phone" name="phone" type="tel" value="{{ old('phone') }}" autocomplete="tel" maxlength="25">
+        @error('phone') <p class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror
+    </div>
+
+    <div>
         <label class="block text-sm font-medium" for="password">Password</label>
         <input class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="password" name="password" type="password" autocomplete="new-password" required>
         @error('password') <p class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror

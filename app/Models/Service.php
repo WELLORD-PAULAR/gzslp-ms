@@ -10,6 +10,7 @@ class Service extends Model
         'name',
         'description',
         'starting_price',
+        'image_path',
         'is_active',
     ];
 
@@ -18,6 +19,7 @@ class Service extends Model
         return [
             'starting_price' => 'decimal:2',
             'is_active' => 'boolean',
+            'lock_version' => 'integer',
         ];
     }
 }

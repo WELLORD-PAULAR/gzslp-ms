@@ -1,4 +1,6 @@
 <div class="space-y-5">
+    @if ($product->exists)<input name="lock_version" type="hidden" value="{{ $product->lock_version }}">@endif
+    @error('conflict')<p class="border-l-4 border-red-700 bg-white px-4 py-3 text-sm text-red-800" role="alert">{{ $message }}</p>@enderror
     <div>
         <label class="block text-sm font-medium" for="name">Product name</label>
         <input class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="name" name="name" value="{{ old('name', $product->name) }}" required maxlength="255">
@@ -8,6 +10,14 @@
         <label class="block text-sm font-medium" for="description">Description</label>
         <textarea class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="description" name="description" rows="4" maxlength="10000">{{ old('description', $product->description) }}</textarea>
         @error('description') <p class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror
+    </div>
+    <div>
+        <label class="block text-sm font-medium" for="image">Product image <span class="font-normal text-gray-500">(JPG, PNG or WebP, up to 5 MB)</span></label>
+        @if ($product->image_path)
+            <img class="mt-3 aspect-[4/3] w-48 rounded border border-gray-200 object-cover" src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($product->image_path) }}" alt="Current image for {{ $product->name }}">
+        @endif
+        <input class="mt-2 block w-full text-sm" id="image" name="image" type="file" accept="image/jpeg,image/png,image/webp">
+        @error('image')<p class="mt-1 text-sm text-red-700">{{ $message }}</p>@enderror
     </div>
     <div>
         <label class="block text-sm font-medium" for="price">Price</label>

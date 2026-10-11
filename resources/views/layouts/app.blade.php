@@ -15,7 +15,7 @@
                 @auth
                     <a class="{{ request()->routeIs('products.*') ? 'text-emerald-800' : 'text-gray-600 hover:text-gray-900' }}" href="{{ route('products.index') }}" @if(request()->routeIs('products.*')) aria-current="page" @endif>Products</a>
                     <a class="{{ request()->routeIs('services') ? 'text-emerald-800' : 'text-gray-600 hover:text-gray-900' }}" href="{{ route('services') }}" @if(request()->routeIs('services')) aria-current="page" @endif>Services</a>
-                    <a class="{{ request()->routeIs('cart') ? 'text-emerald-800' : 'text-gray-600 hover:text-gray-900' }}" href="{{ route('cart') }}" @if(request()->routeIs('cart')) aria-current="page" @endif>Cart <span class="ml-1 text-xs text-gray-500">0</span></a>
+                    <a class="{{ request()->routeIs('cart') ? 'text-emerald-800' : 'text-gray-600 hover:text-gray-900' }}" href="{{ route('cart') }}" @if(request()->routeIs('cart')) aria-current="page" @endif>Cart <span class="ml-1 text-xs text-gray-500">{{ auth()->user()->cart?->items()->sum('quantity') ?? 0 }}</span></a>
                 @endauth
             </div>
             <div class="flex shrink-0 items-center gap-4 text-sm">

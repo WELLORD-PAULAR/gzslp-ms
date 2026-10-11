@@ -22,3 +22,4 @@
 </form>
 
 <p class="mt-6 text-sm">New here? <a class="font-medium text-emerald-800 underline" href="{{ route('register') }}">Create an account</a></p>
+<p class="mt-2 text-sm"><a class="text-gray-600 underline" href="{{ route('password.request') }}">Forgot your password?</a></p>
