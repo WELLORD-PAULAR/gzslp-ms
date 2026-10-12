@@ -13,6 +13,8 @@
             <div class="flex gap-5 text-sm">
                 <a href="{{ route('admin.products.index') }}">Products</a>
                 <a href="{{ route('admin.services.index') }}">Services</a>
+                <a href="{{ route('admin.inventory.index') }}">Inventory</a>
+                <a href="{{ route('admin.suppliers.index') }}">Suppliers</a>
                 <a href="{{ route('admin.orders.index') }}">Orders</a>
                 @can('access-admin')<a href="{{ route('admin.reports.index') }}">Reports</a>@endcan
                 @can('access-admin')<a href="{{ route('admin.users.index') }}">Accounts</a>@endcan

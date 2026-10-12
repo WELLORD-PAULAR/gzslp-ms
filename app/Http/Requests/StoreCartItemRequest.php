@@ -17,6 +17,7 @@ class StoreCartItemRequest extends FormRequest
         return [
             'item_type' => ['required', Rule::in(['product', 'service'])],
             'item_id' => ['required', 'integer', 'min:1'],
+            'variant_id' => ['nullable', 'required_if:item_type,product', 'integer', 'exists:product_variants,id'],
             'quantity' => ['required', 'integer', 'min:1', 'max:99'],
         ];
     }

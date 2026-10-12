@@ -27,6 +27,7 @@
             <article class="flex flex-wrap justify-between gap-5 py-5">
                 <div>
                     <h2 class="font-semibold">{{ $item->item_name }}</h2>
+                    @if($item->variant_name)<p class="mt-1 text-sm text-gray-600">{{ $item->variant_name }}@if($item->variant_options) · {{ collect($item->variant_options)->map(fn ($value, $key) => \Illuminate\Support\Str::headline($key).': '.$value)->join(' · ') }}@endif</p>@endif
                     @if ($item->item_description)<p class="mt-1 text-sm text-gray-600">{{ $item->item_description }}</p>@endif
                     @if ($item->paper_size || $item->paper_weight || $item->paper_finish)
                         <p class="mt-2 text-sm text-gray-600">{{ collect(['Size: '.$item->paper_size, 'Weight: '.$item->paper_weight, 'Finish: '.$item->paper_finish])->filter(fn ($detail) => ! str_ends_with($detail, ': '))->join(' · ') }}</p>

@@ -5,6 +5,9 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\Service;
 use App\Models\User;
+use App\Models\InventoryItem;
+use App\Models\InventoryMovement;
+use App\Models\ProductVariant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -22,8 +25,9 @@ test('a customer can submit an order from the cart with purchase-time snapshots'
         'paper_finish' => 'Matte',
         'is_active' => true,
     ]);
+    $variant = $product->variants()->firstOrFail();
     $cart = $customer->cart()->create();
-    $cart->items()->create(['product_id' => $product->id, 'quantity' => 2]);
+    $cart->items()->create(['product_id' => $product->id, 'product_variant_id' => $variant->id, 'quantity' => 2]);
 
     $this->actingAs($customer)
         ->post(route('orders.store'), ['customer_note' => 'Please print with a white border.'])
@@ -38,6 +42,7 @@ test('a customer can submit an order from the cart with purchase-time snapshots'
         ->and($order->items->first()->unit_price)->toBe('12.50')
         ->and($order->items->first()->quantity)->toBe(2)
         ->and($order->items->first()->paper_finish)->toBe('Matte')
+        ->and($order->items->first()->variant_name)->toBe('Standard')
         ->and($order->customer_note)->toBe('Please print with a white border.');
 
     expect($cart->items()->count())->toBe(0);
@@ -53,9 +58,10 @@ test('a customer can submit an order from the cart with purchase-time snapshots'
 test('quote-only services create quote-requested orders with a pre-quote subtotal', function () {
     $customer = User::factory()->create();
     $product = Product::create(['name' => 'Basic Print', 'price' => '7.50', 'is_active' => true]);
+    $variant = $product->variants()->firstOrFail();
     $service = Service::create(['name' => 'Custom Artwork', 'starting_price' => null, 'is_active' => true]);
     $cart = $customer->cart()->create();
-    $cart->items()->create(['product_id' => $product->id, 'quantity' => 2]);
+    $cart->items()->create(['product_id' => $product->id, 'product_variant_id' => $variant->id, 'quantity' => 2]);
     $cart->items()->create(['service_id' => $service->id, 'quantity' => 1]);
 
     $this->actingAs($customer)
@@ -203,7 +209,8 @@ test('an empty or unavailable cart cannot become an order', function () {
     expect(Order::count())->toBe(0);
 
     $product = Product::create(['name' => 'Print', 'price' => '8.00', 'is_active' => true]);
-    $cart->items()->create(['product_id' => $product->id, 'quantity' => 1]);
+    $variant = $product->variants()->firstOrFail();
+    $cart->items()->create(['product_id' => $product->id, 'product_variant_id' => $variant->id, 'quantity' => 1]);
     $product->update(['is_active' => false]);
 
     $this->post(route('orders.store'))->assertSessionHasErrors('cart');
@@ -231,7 +238,8 @@ test('custom artwork is stored privately and only the customer or staff can down
     Storage::fake('local');
     $customer = User::factory()->create();
     $product = Product::create(['name' => 'Custom print', 'price' => '20.00', 'is_active' => true]);
-    $customer->cart()->create()->items()->create(['product_id' => $product->id, 'quantity' => 1]);
+    $variant = $product->variants()->firstOrFail();
+    $customer->cart()->create()->items()->create(['product_id' => $product->id, 'product_variant_id' => $variant->id, 'quantity' => 1]);
 
     $this->actingAs($customer)
         ->post(route('orders.store'), [
@@ -250,4 +258,72 @@ test('custom artwork is stored privately and only the customer or staff can down
     $employee = User::factory()->create();
     $employee->forceFill(['role' => User::ROLE_EMPLOYEE])->save();
     $this->actingAs($employee)->get(route('admin.orders.artwork', $order))->assertOk();
+});
+
+test('supplies are consumed once when staff starts production, not when the cart is submitted', function () {
+    $customer = User::factory()->create();
+    $admin = User::factory()->create();
+    $admin->forceFill(['role' => User::ROLE_ADMIN])->save();
+    $product = Product::create(['name' => 'Printed shirt', 'category' => 'shirt', 'price' => '30.00', 'is_active' => true]);
+    $variant = $product->variants()->firstOrFail();
+    $supply = InventoryItem::create([
+        'name' => 'Blank shirt / Large',
+        'category' => 'blank_shirt',
+        'unit' => 'piece',
+        'quantity_on_hand' => '10.000',
+        'reorder_level' => '2.000',
+        'is_active' => true,
+    ]);
+    $variant->supplies()->attach($supply->id, ['quantity_per_unit' => '1.000']);
+    $customer->cart()->create()->items()->create([
+        'product_id' => $product->id,
+        'product_variant_id' => $variant->id,
+        'quantity' => 3,
+    ]);
+
+    $this->actingAs($customer)->post(route('orders.store'))->assertRedirect(route('orders.show', 1));
+    expect($supply->fresh()->quantity_on_hand)->toBe('10.000');
+
+    $order = Order::firstOrFail();
+    $this->actingAs($admin)->patch(route('admin.orders.update', $order), [
+        'status' => Order::STATUS_PROCESSING,
+    ])->assertRedirect(route('admin.orders.show', $order));
+
+    expect($supply->fresh()->quantity_on_hand)->toBe('7.000')
+        ->and($order->fresh()->inventory_consumed_at)->not->toBeNull()
+        ->and($supply->movements()->where('order_id', $order->id)->count())->toBe(1)
+        ->and($supply->movements()->where('order_id', $order->id)->first()->type)->toBe(InventoryMovement::TYPE_USED);
+});
+
+test('production cannot start if a variant recipe has insufficient supplies', function () {
+    $customer = User::factory()->create();
+    $admin = User::factory()->create();
+    $admin->forceFill(['role' => User::ROLE_ADMIN])->save();
+    $product = Product::create(['name' => 'Print poster', 'category' => 'paper', 'price' => '20.00', 'is_active' => true]);
+    $variant = $product->variants()->firstOrFail();
+    $supply = InventoryItem::create([
+        'name' => 'Poster sheet',
+        'category' => 'paper',
+        'unit' => 'sheet',
+        'quantity_on_hand' => '2.000',
+        'reorder_level' => '1.000',
+        'is_active' => true,
+    ]);
+    $variant->supplies()->attach($supply->id, ['quantity_per_unit' => '1.000']);
+    $customer->cart()->create()->items()->create([
+        'product_id' => $product->id,
+        'product_variant_id' => $variant->id,
+        'quantity' => 3,
+    ]);
+    $this->actingAs($customer)->post(route('orders.store'))->assertRedirect(route('orders.show', 1));
+    $order = Order::firstOrFail();
+
+    $this->actingAs($admin)
+        ->from(route('admin.orders.show', $order))
+        ->patch(route('admin.orders.update', $order), ['status' => Order::STATUS_PROCESSING])
+        ->assertSessionHasErrors('inventory');
+
+    expect($order->fresh()->status)->toBe(Order::STATUS_PENDING)
+        ->and($supply->fresh()->quantity_on_hand)->toBe('2.000')
+        ->and($supply->movements()->where('order_id', $order->id)->count())->toBe(0);
 });

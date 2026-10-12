@@ -8,7 +8,10 @@ use App\Models\Order;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use App\Services\InventoryConsumptionService;
 
 class OrderController extends Controller
 {
@@ -31,13 +34,29 @@ class OrderController extends Controller
     {
         $data = $request->validated();
 
-        if ($data['status'] === Order::STATUS_QUOTE_SENT) {
-            $order->quoted_total = $data['quoted_total'];
-        }
+        try {
+            DB::transaction(function () use ($request, $order, $data): void {
+                $lockedOrder = Order::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
 
-        $order->status = $data['status'];
-        $order->admin_note = $data['admin_note'] ?? null;
-        $order->save();
+                if (! in_array($data['status'], $lockedOrder->allowedAdminStatuses(), true)) {
+                    throw ValidationException::withMessages(['status' => 'This order status has changed. Reload and choose an available next status.']);
+                }
+
+                if ($data['status'] === Order::STATUS_PROCESSING) {
+                    app(InventoryConsumptionService::class)->consumeForOrder($lockedOrder, $request->user());
+                }
+
+                if ($data['status'] === Order::STATUS_QUOTE_SENT) {
+                    $lockedOrder->quoted_total = $data['quoted_total'];
+                }
+
+                $lockedOrder->status = $data['status'];
+                $lockedOrder->admin_note = $data['admin_note'] ?? null;
+                $lockedOrder->save();
+            });
+        } catch (ValidationException $exception) {
+            return redirect()->route('admin.orders.show', $order)->withErrors($exception->errors());
+        }
 
         return redirect()->route('admin.orders.show', $order)->with('status', 'Order updated.');
     }

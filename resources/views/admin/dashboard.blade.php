@@ -10,6 +10,8 @@
         <div class="mt-8 flex flex-wrap gap-3">
             <a class="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white" href="{{ route('admin.products.index') }}">Manage products</a>
             <a class="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium" href="{{ route('admin.services.index') }}">Manage services</a>
+            <a class="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium" href="{{ route('admin.inventory.index') }}">Manage supplies</a>
+            <a class="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium" href="{{ route('admin.suppliers.index') }}">Manage suppliers</a>
             <a class="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium" href="{{ route('admin.orders.index') }}">Manage orders</a>
             <a class="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium" href="{{ route('admin.reports.index') }}">View reports</a>
             @can('access-admin')<a class="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium" href="{{ route('admin.users.index') }}">Manage accounts</a>@endcan

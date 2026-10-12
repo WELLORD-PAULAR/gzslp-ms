@@ -36,6 +36,9 @@
                         <div class="flex flex-wrap items-start justify-between gap-4">
                             <div class="min-w-0 flex-1">
                                 <h2 class="text-lg font-semibold">{{ $item->name }}</h2>
+                                @if ($item->productVariant?->options)
+                                    <p class="mt-1 text-sm text-gray-600">{{ collect($item->productVariant->options)->map(fn ($value, $key) => \Illuminate\Support\Str::headline($key).': '.$value)->join(' · ') }}</p>
+                                @endif
                                 @if ($item->product?->description || $item->service?->description)
                                     <p class="mt-1 text-sm text-gray-600">{{ $item->product?->description ?? $item->service?->description }}</p>
                                 @endif

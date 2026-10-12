@@ -9,7 +9,10 @@ class OrderItem extends Model
 {
     protected $fillable = [
         'product_id',
+        'product_variant_id',
         'service_id',
+        'variant_name',
+        'variant_options',
         'item_name',
         'item_description',
         'unit_price',
@@ -24,6 +27,7 @@ class OrderItem extends Model
         return [
             'unit_price' => 'decimal:2',
             'quantity' => 'integer',
+            'variant_options' => 'array',
         ];
     }
 
@@ -40,6 +44,11 @@ class OrderItem extends Model
     public function service(): BelongsTo
     {
         return $this->belongsTo(Service::class);
+    }
+
+    public function productVariant(): BelongsTo
+    {
+        return $this->belongsTo(ProductVariant::class);
     }
 
     public function getLineTotalAttribute(): ?string

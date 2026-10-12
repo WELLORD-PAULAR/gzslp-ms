@@ -25,7 +25,7 @@ test('an admin can create edit and delete a product', function () {
         'paper_weight' => '150 gsm',
         'paper_finish' => 'Matte',
         'is_active' => '1',
-    ])->assertRedirect(route('admin.products.index'));
+    ])->assertRedirect(route('admin.products.variants.index', Product::firstOrFail()));
 
     $product = Product::firstOrFail();
     $this->get(route('admin.products.edit', $product))->assertOk();
@@ -196,15 +196,16 @@ test('catalog image uploads are public and replaced or deleted files are cleaned
     $admin = User::factory()->create();
     $admin->forceFill(['role' => User::ROLE_ADMIN])->save();
 
-    $this->actingAs($admin)
+    $response = $this->actingAs($admin)
         ->post(route('admin.products.store'), [
             'name' => 'Poster',
             'price' => '20.00',
             'is_active' => '1',
             'image' => UploadedFile::fake()->image('poster.png'),
-        ])->assertRedirect(route('admin.products.index'));
+        ]);
 
     $product = Product::firstOrFail();
+    $response->assertRedirect(route('admin.products.variants.index', $product));
     $originalImage = $product->image_path;
     Storage::disk('public')->assertExists($originalImage);
 

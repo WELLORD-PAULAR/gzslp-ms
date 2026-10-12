@@ -51,17 +51,8 @@
                         @if ($product->paper_finish) <span class="mx-1">&middot;</span> Finish: {{ $product->paper_finish }} @endif
                     </p>
                 @endif
-                <p class="mt-4 font-medium">{{ number_format((float) $product->price, 2) }}</p>
-                <form class="mt-4 flex items-end gap-3" method="POST" action="{{ route('cart.items.store') }}">
-                    @csrf
-                    <input name="item_type" type="hidden" value="product">
-                    <input name="item_id" type="hidden" value="{{ $product->id }}">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600" for="quantity-{{ $product->id }}">Quantity</label>
-                        <input class="mt-1 w-20 rounded border border-gray-300 px-2 py-1.5" id="quantity-{{ $product->id }}" name="quantity" type="number" min="1" max="99" value="1" required>
-                    </div>
-                    <button class="rounded bg-emerald-800 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-900" type="submit">Add to cart</button>
-                </form>
+                <p class="mt-4 font-medium">From {{ number_format((float) $product->variants->min('price'), 2) }}</p>
+                <a class="mt-4 inline-flex rounded border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-white" href="{{ route('products.show', $product) }}">Choose options</a>
             </article>
         @empty
             <p class="border-y border-gray-200 py-8 text-gray-600">There are no products available right now.</p>

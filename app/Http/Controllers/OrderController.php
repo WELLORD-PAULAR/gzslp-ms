@@ -6,6 +6,7 @@ use App\Http\Requests\PlaceOrderRequest;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Order;
+use App\Services\InventoryConsumptionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -39,7 +40,7 @@ class OrderController extends Controller
                 throw ValidationException::withMessages(['cart' => 'Add items to your cart before submitting an order.']);
             }
 
-            $items = $cart->items()->with(['product', 'service'])->lockForUpdate()->get();
+            $items = $cart->items()->with(['product', 'productVariant', 'service'])->lockForUpdate()->get();
 
             if ($items->isEmpty()) {
                 throw ValidationException::withMessages(['cart' => 'Add items to your cart before submitting an order.']);
@@ -71,9 +72,12 @@ class OrderController extends Controller
 
                 $order->items()->create([
                     'product_id' => $product?->id,
+                    'product_variant_id' => $item->product_variant_id,
                     'service_id' => $service?->id,
                     'item_name' => $product?->name ?? $service->name,
                     'item_description' => $product?->description ?? $service?->description,
+                    'variant_name' => $item->productVariant?->name,
+                    'variant_options' => $item->productVariant?->options,
                     'unit_price' => $item->unit_price,
                     'quantity' => $item->quantity,
                     'paper_size' => $product?->paper_size,
@@ -123,16 +127,25 @@ class OrderController extends Controller
     {
         $order = $request->user()->orders()->findOrFail($order->id);
 
-        if ($order->status !== Order::STATUS_QUOTE_SENT || $order->quoted_total === null) {
-            return redirect()->route('orders.show', $order)->withErrors([
-                'order' => 'There is no quote available to accept for this order.',
-            ]);
-        }
+        try {
+            DB::transaction(function () use ($request, $order): void {
+                $lockedOrder = Order::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
 
-        $order->update([
-            'status' => Order::STATUS_PROCESSING,
-            'customer_accepted_at' => now(),
-        ]);
+                if ($lockedOrder->status !== Order::STATUS_QUOTE_SENT || $lockedOrder->quoted_total === null) {
+                    throw ValidationException::withMessages([
+                        'order' => 'There is no quote available to accept for this order.',
+                    ]);
+                }
+
+                app(InventoryConsumptionService::class)->consumeForOrder($lockedOrder, $request->user());
+                $lockedOrder->update([
+                    'status' => Order::STATUS_PROCESSING,
+                    'customer_accepted_at' => now(),
+                ]);
+            });
+        } catch (ValidationException $exception) {
+            return redirect()->route('orders.show', $order)->withErrors($exception->errors());
+        }
 
         return redirect()->route('orders.show', $order)->with('status', 'Quote accepted. Your order is now processing.');
     }

@@ -11,6 +11,9 @@ use App\Http\Controllers\Admin\ServiceController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Admin\InventoryController;
+use App\Http\Controllers\Admin\SupplierController;
+use App\Http\Controllers\Admin\ProductVariantController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
@@ -57,6 +60,8 @@ Route::middleware('auth')->group(function () {
         $paperFinish = request()->string('paper_finish')->trim()->toString();
         $products = Product::query()
             ->where('is_active', true)
+            ->whereHas('variants', fn ($query) => $query->where('is_active', true))
+            ->with(['variants' => fn ($query) => $query->where('is_active', true)])
             ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
                 ->where('name', 'like', '%'.$search.'%')
                 ->orWhere('description', 'like', '%'.$search.'%')))
@@ -75,6 +80,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/products/{product}', function (Product $product) {
         abort_unless($product->is_active, 404);
+        $product->load(['variants' => fn ($query) => $query->where('is_active', true)->orderByDesc('is_default')->orderBy('name')]);
+        abort_if($product->variants->isEmpty(), 404);
 
         return view('store.product-show', compact('product'));
     })->name('products.show');
@@ -127,11 +134,24 @@ Route::middleware('auth')->group(function () {
         })->name('dashboard');
 
         Route::resource('products', ProductController::class)->except('show');
+        Route::get('/products/{product}/variants', [ProductVariantController::class, 'index'])->name('products.variants.index');
+        Route::get('/products/{product}/variants/create', [ProductVariantController::class, 'create'])->name('products.variants.create');
+        Route::post('/products/{product}/variants', [ProductVariantController::class, 'store'])->name('products.variants.store');
+        Route::get('/products/{product}/variants/{productVariant}/edit', [ProductVariantController::class, 'edit'])->name('products.variants.edit');
+        Route::put('/products/{product}/variants/{productVariant}', [ProductVariantController::class, 'update'])->name('products.variants.update');
         Route::resource('services', ServiceController::class)->except('show');
         Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
         Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
         Route::get('/orders/{order}/artwork', [AdminOrderController::class, 'downloadArtwork'])->name('orders.artwork');
         Route::patch('/orders/{order}', [AdminOrderController::class, 'update'])->name('orders.update');
+        Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
+        Route::get('/inventory/create', [InventoryController::class, 'create'])->name('inventory.create');
+        Route::post('/inventory', [InventoryController::class, 'store'])->name('inventory.store');
+        Route::get('/inventory/{inventoryItem}/edit', [InventoryController::class, 'edit'])->name('inventory.edit');
+        Route::put('/inventory/{inventoryItem}', [InventoryController::class, 'update'])->name('inventory.update');
+        Route::get('/inventory/{inventoryItem}', [InventoryController::class, 'show'])->name('inventory.show');
+        Route::post('/inventory/{inventoryItem}/movements', [InventoryController::class, 'recordMovement'])->name('inventory.movements.store');
+        Route::resource('suppliers', SupplierController::class)->except(['show', 'destroy']);
         Route::middleware('can:access-admin')->group(function () {
             Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
             Route::resource('users', AdminUserController::class)->except(['show', 'destroy']);

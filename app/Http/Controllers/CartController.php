@@ -19,7 +19,7 @@ class CartController extends Controller
 {
     public function index(Request $request): View
     {
-        $cart = $request->user()->cart()->with(['items.product', 'items.service'])->first();
+        $cart = $request->user()->cart()->with(['items.product', 'items.productVariant', 'items.service'])->first();
         $items = $cart?->items ?? collect();
         $hasUnavailableItems = $items->contains(fn (CartItem $item): bool => ! $item->is_available);
         $requiresQuote = $items->contains(fn (CartItem $item): bool => $item->is_available && $item->unit_price === null);
@@ -42,14 +42,17 @@ class CartController extends Controller
         $catalogItem = $itemType === 'product'
             ? Product::where('is_active', true)->findOrFail($data['item_id'])
             : Service::where('is_active', true)->findOrFail($data['item_id']);
+        $variant = $itemType === 'product'
+            ? $catalogItem->variants()->where('is_active', true)->findOrFail($data['variant_id'])
+            : null;
         $cart = $request->user()->cart()->firstOrCreate();
 
-        DB::transaction(function () use ($cart, $data, $itemType, $catalogItem): void {
+        DB::transaction(function () use ($cart, $data, $itemType, $catalogItem, $variant): void {
             $lockedCart = Cart::query()->whereKey($cart->id)->lockForUpdate()->firstOrFail();
             $itemQuery = $lockedCart->items();
 
             if ($itemType === 'product') {
-                $itemQuery->where('product_id', $catalogItem->id);
+                $itemQuery->where('product_variant_id', $variant->id);
             } else {
                 $itemQuery->where('service_id', $catalogItem->id);
             }
@@ -68,6 +71,7 @@ class CartController extends Controller
             } else {
                 $lockedCart->items()->create([
                     'product_id' => $itemType === 'product' ? $catalogItem->id : null,
+                    'product_variant_id' => $itemType === 'product' ? $variant->id : null,
                     'service_id' => $itemType === 'service' ? $catalogItem->id : null,
                     'quantity' => $quantity,
                 ]);

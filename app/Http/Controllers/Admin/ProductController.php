@@ -19,7 +19,7 @@ class ProductController extends Controller
     public function index(): View
     {
         return view('admin.products.index', [
-            'products' => Product::latest()->get(),
+            'products' => Product::with('variants')->latest()->get(),
         ]);
     }
 
@@ -38,12 +38,13 @@ class ProductController extends Controller
     {
         $data = $request->validated();
         unset($data['image']);
+        $data['category'] = $data['category'] ?? 'paper';
         $data['is_active'] = $request->boolean('is_active');
         $data['image_path'] = $request->file('image')?->store('products', 'public');
 
-        Product::create($data);
+        $product = Product::create($data);
 
-        return redirect()->route('admin.products.index')->with('status', 'Product created.');
+        return redirect()->route('admin.products.variants.index', $product)->with('status', 'Product created. Add size/color variants and supply recipes.');
     }
 
     /**
@@ -63,6 +64,7 @@ class ProductController extends Controller
         $expectedVersion = (int) $data['lock_version'];
         unset($data['lock_version']);
         unset($data['image']);
+        $data['category'] = $data['category'] ?? $product->category;
         $data['is_active'] = $request->boolean('is_active');
         $newImagePath = $request->file('image')?->store('products', 'public');
 
@@ -88,6 +90,11 @@ class ProductController extends Controller
         if ($newImagePath !== null && $product->image_path !== null) {
             Storage::disk('public')->delete($product->image_path);
         }
+
+        $product->variants()->where('is_default', true)->update([
+            'price' => $data['price'],
+            'updated_at' => now(),
+        ]);
 
         return redirect()->route('admin.products.index')->with('status', 'Product updated.');
     }

@@ -44,6 +44,7 @@ class Order extends Model
             'subtotal' => 'decimal:2',
             'quoted_total' => 'decimal:2',
             'customer_accepted_at' => 'datetime',
+            'inventory_consumed_at' => 'datetime',
         ];
     }
 

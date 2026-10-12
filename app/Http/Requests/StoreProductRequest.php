@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreProductRequest extends FormRequest
 {
@@ -18,6 +19,7 @@ class StoreProductRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            'category' => ['sometimes', Rule::in(\App\Models\Product::CATEGORIES)],
             'description' => ['nullable', 'string', 'max:10000'],
             'price' => ['required', 'numeric', 'decimal:0,2', 'min:0.01', 'max:99999999.99'],
             'paper_size' => ['nullable', 'string', 'max:80'],

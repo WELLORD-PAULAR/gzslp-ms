@@ -76,14 +76,14 @@ The application uses Vite with Tailwind CSS for compiled frontend assets. No pay
 | Module | Current status | Present behavior | Remaining work from the SDD |
 |---|---|---|---|
 | Account management | Partial | Customer registration, login/logout, profile/phone/password editing, email verification/reset, active-state protection, and customer/employee/admin roles. Admins create/update/deactivate accounts; the last active admin is protected. | Verification is advisory, not required for shopping; audit trail, fine-grained staff permissions, and privacy/deletion workflow remain. |
-| Product catalog | Partial | Employee/admin create/list/edit/delete; optional public image, paper size/weight/finish, active visibility and stale-edit protection. Customers search/filter and view details. Pre-created designs are products. | Selectable price-changing variants, quantities/stock, and advanced discovery. |
+| Product catalog | Partial | Employee/admin create/list/edit/delete; optional public image, finished-product category, default and custom option variants, and per-variant pricing. Customers search/filter and view detail pages with a selected variant before adding to cart. | Advanced discovery, price-changing variant bundles, and broader product metadata remain. |
 | Service management | Partial | Employee/admin create/list/edit/delete; optional public image, starting price/visibility and stale-edit protection. Customers search/view details and add priced/quote-only services. Orders support private custom-artwork uploads. | Multi-message quote conversation, estimate/fulfillment workflow, richer service options. |
-| Cart management | Partial | Each customer has a persisted cart; add products/services, merge repeated adds, update/remove quantities, show item count, and calculate prices from current catalog records. Inactive listings cannot be added; quote-only services show a pre-quote subtotal. | Cart customization/options, quote request submission, checkout/order creation, and inventory-aware availability. |
-| Order management | Partial | Customers submit carts with notes and optional private artwork, view their own history/details, and cancel eligible requests. Admins review orders, download artwork, send quotes, and advance status. Order lines preserve catalog snapshots. | Payment/inventory integration, fulfillment estimates, shipping/address data, notifications, and richer staff workflows. |
+| Cart management | Partial | Each customer has a persisted cart; add products/services, merge repeated adds, update/remove quantities, show item count, and calculate prices from current catalog records. Product cart lines carry the selected variant and variant price; inactive listings cannot be added; quote-only services show a pre-quote subtotal. | Cart customization/options, quote request submission, checkout/order creation, and inventory-aware availability. |
+| Order management | Partial | Customers submit carts with notes and optional private artwork, view their own history/details, and cancel eligible requests. Admins review orders, download artwork, send quotes, and advance status. Order lines preserve catalog snapshots including the selected product variant and encoded options. | Payment, more advanced fulfillment estimates, shipping/address data, notifications, and richer staff workflows. |
 | Transaction processing | Planned | No payment or transaction records/integration. | Payment method selection, transaction validation, status recording, staff-recorded manual payment and/or gateway integration. |
-| Inventory management | Planned | No stock, supplier, or restock model. | Stock records, availability checks, low-stock reporting, suppliers, restock operations. |
+| Inventory management | Partial | Staff track raw supplies separately from finished catalog products; suppliers link to supplies; receipts, usage and stocktakes are recorded with balance history; low-stock items are flagged. Production start consumes each product variant’s recipe once, and insufficient stock blocks the transition. | Purchase orders/cost valuation, deeper fulfillment/status reporting, and inventory-driven quote rules remain. |
 | Report generation | Partial | Admin-only date-filtered order activity report with status counts, completed-order count/value, catalog active/hidden counts, pagination, and browser print. Completed-order value is not marked as paid revenue. | True sales report requires transaction/payment records; inventory report requires stock/supplier data. CSV/PDF export and additional performance measures remain. |
-| Customer storefront | Partial | Auth overlays, protected navigation, searchable/paginated product/service catalog with images/details, cart/order flow, set designs as products and private custom-artwork attachment. | Selectable variants, design-specific customization, and payment/fulfillment flow. |
+| Customer storefront | Partial | Auth overlays, protected navigation, searchable/paginated product/service catalog with images/details, cart/order flow, set designs as products and private custom-artwork attachment. Product details let customers pick active variants before adding to cart. | Payment/fulfillment flow and broader product discovery remain. |
 
 ### 4.2 Current Key Processes
 
@@ -91,21 +91,23 @@ The application uses Vite with Tailwind CSS for compiled frontend assets. No pay
 
 **Login:** Guest submits email/password. The login Form Request validates credentials, applies a five-failure rate limit keyed by normalized email and IP, authenticates only active accounts, regenerates the session, and routes employees/admins to shop management and customers to their account.
 
-**Catalog management:** An employee/admin submits a create/update form. A role-aware Form Request authorizes and validates fields. Updates compare the submitted `lock_version` with the current database version, increment on success, and reject stale changes. Delete uses a CSRF-protected DELETE form.
+**Catalog management:** An employee/admin submits a create/update form. A role-aware Form Request authorizes and validates fields. Updates compare the submitted `lock_version` with the current database version, increment on success, and reject stale changes. Delete uses a CSRF-protected DELETE form. Products also support a `category` and multiple `product_variants`, each with a price, option fields, and optional raw-supply recipe. A default `Standard` variant preserves legacy product records when a product has no explicit variant created yet.
 
-**Customer catalog viewing:** Active authenticated users request Products or Services. Routes query only `is_active` records, support search/filter and pagination, and expose individual detail pages. Guests are redirected to login.
+**Customer catalog viewing:** Active authenticated users request Products or Services. Routes query only `is_active` records, support search/filter and pagination, and expose individual detail pages. Guests are redirected to login. Product detail pages let the customer choose an active variant before adding it to the cart.
 
-**Cart management:** An authenticated non-admin customer adds an active product/service with a quantity from 1 to 99. The application creates or reuses that customer's cart and combines repeated additions of the same catalog entry. Quantity updates and removal are scoped to the authenticated user's cart. The cart reads the current catalog price and calculates amounts in integer cents. Quote-only services remain in the cart but make the final total pending; the view shows a pre-quote subtotal. This is not checkout: cart contents do not create orders or reserve inventory.
+**Cart management:** An authenticated non-admin customer adds an active product/service with a quantity from 1 to 99. The application creates or reuses that customer's cart and combines repeated additions of the same catalog entry. Product cart lines include the selected `product_variant_id`, which keeps the chosen option set and variant price in the cart. Quantity updates and removal are scoped to the authenticated user's cart. The cart reads the current catalog price and calculates amounts in integer cents. Quote-only services remain in the cart but make the final total pending; the view shows a pre-quote subtotal. This is not checkout: cart contents do not create orders or reserve inventory.
 
-**Order submission:** A customer submits a non-empty cart with an optional note. Within one database transaction, the system locks the cart and lines, rechecks active availability, calculates the subtotal from current catalog prices, creates the order and immutable name/description/price/quantity/paper-option snapshots, then clears the cart. If an item became unavailable, the transaction is rejected and the cart remains intact. A cart containing a quote-only service creates a `quote_requested` order with a pre-quote subtotal and no final total.
+**Order submission:** A customer submits a non-empty cart with an optional note. Within one database transaction, the system locks the cart and lines, rechecks active availability, calculates the subtotal from current catalog prices, creates the order and immutable name/description/price/quantity/product-variant snapshots, then clears the cart. If an item became unavailable, the transaction is rejected and the cart remains intact. A cart containing a quote-only service creates a `quote_requested` order with a pre-quote subtotal and no final total.
 
 Customers may also attach one JPG, PNG, or PDF artwork file (up to 10 MB) to the order. It is stored on Laravel's private local disk and is not served through a public URL. Customer downloads are scoped to the customer's order; staff downloads are behind the shop-management Gate. If order creation fails, the just-uploaded file is removed.
 
-**Order tracking and administration:** Customers can list and view only their own orders. They may cancel orders in `pending`, `quote_requested`, or `quote_sent`; later statuses cannot be customer-cancelled. Admin status transitions are constrained: `pending` to `processing`/`cancelled`; `quote_requested` to `quote_sent`/`cancelled`; `quote_sent` to `cancelled`; `processing` to `completed`/`cancelled`. A customer must explicitly accept a sent quote, which records `customer_accepted_at` and moves the order to `processing`. Sending a quote requires a valid quoted total. Payments and inventory reservation are not part of this workflow yet.
+**Order tracking and administration:** Customers can list and view only their own orders. They may cancel orders in `pending`, `quote_requested`, or `quote_sent`; later statuses cannot be customer-cancelled. Admin status transitions are constrained: `pending` to `processing`/`cancelled`; `quote_requested` to `quote_sent`/`cancelled`; `quote_sent` to `cancelled`; `processing` to `completed`/`cancelled`. A customer must explicitly accept a sent quote, which records `customer_accepted_at` and moves the order to `processing`. Sending a quote requires a valid quoted total. Moving an order into `processing` now also consumes the selected product variant's supply recipe once, and missing stock rejects the transition. This keeps stock deduction tied to production-start rather than to cart submission.
 
 **Account maintenance:** Customers update their own contact details/password; email changes clear verification. Laravel verification and password-reset flows use configured notifications. Admins create/update customer/employee/admin accounts and deactivate accounts without deleting order history; the last active admin cannot be disabled or demoted. Employees can manage shop operations but cannot manage accounts or view reports. Verification currently prompts but does not block shopping.
 
-**Concurrency:** Product and service edit forms submit `lock_version`. If another employee/admin has saved first, the stale request is rejected with a reload/reapply message instead of overwriting the newer record.
+**Concurrency:** Product and service edit forms submit `lock_version`. If another employee/admin has saved first, the stale request is rejected with a reload/reapply message instead of overwriting the newer record. Product variants also use `lock_version` when edited so the price/recipe update is not overwritten by a stale form.
+
+**Supply inventory:** Staff create supply records with category, unit, reorder threshold and optional suppliers. New records start at zero. Receipts add quantity and require a supplier; usage subtracts quantity and cannot make stock negative; stocktakes set the balance to a physical count. Each movement locks the item in a database transaction, updates its balance and appends a before/after record with the acting user. Low stock means an active supply at or below its reorder threshold. Product variants can define a supply recipe: a per-unit quantity of raw material consumed when that finished item starts production. Production start is atomic: if the required material is not available, the order stays in its current status and no stock is deducted.
 
 ## 5. Dependency Description
 
@@ -114,10 +116,11 @@ Customers may also attach one JPG, PNG, or PDF artwork file (up to 10 MB) to the
 | Account/auth | Laravel authentication, sessions, users table | Internal/framework | Registration, authentication, authorization, and session lifecycle. Implemented. |
 | Admin catalog | Account/auth Gate `manage-shop`, Product/Service models | Internal | Restricts catalog changes to employees/admins; optimistic versions protect concurrent edits. Implemented at CRUD level. |
 | Customer catalog | Product/Service models and authenticated session | Internal | Shows active listings only to signed-in customers. Implemented. |
-| Cart | Account, product/service catalog | Internal | Partially implemented; customer Gate, ownership-scoped cart records, active checks, and server-side pricing are in place. |
-| Orders | Account, cart, product/service catalog | Internal | Partially implemented; cart ownership, availability recheck, price calculation, snapshots, order history, and status workflows are in place. Inventory reservation and payment are not. |
+| Cart | Account, product/service catalog, product variants | Internal | Partially implemented; customer Gate, ownership-scoped cart records, active checks, selected-variant pricing, and server-side pricing are in place. |
+| Orders | Account, cart, product/service catalog, product variants | Internal | Partially implemented; cart ownership, availability recheck, price calculation, snapshots, order history, and status workflows are in place. Variant recipe stock consumption starts at production, and payment remains separate. |
 | Transactions | Orders and selected payment method/provider | Internal/external | Planned; no payment integration is installed. Provider and manual payment scope need decisions. |
-| Inventory | Products, suppliers, restock records | Internal | Planned; exact stock model and supplier workflow need confirmation. |
+| Inventory | Products, product variants, suppliers, raw-supply recipes and movement records | Internal | Partial; raw supply model and variant consumption rules are in place, but purchase-order/cost valuation and broader fulfillment tracking remain open. |
+| Supply inventory | Suppliers, staff accounts, inventory movement ledger, product variant recipes | Internal | Partial; receipts/usage/stocktakes, low-stock thresholds, and production-time consumption are tracked. |
 | Reports | Orders and product/service catalog; future transactions/inventory | Internal | Partial; current report reads order/catalog records and is admin-only. Paid revenue and stock reports await their source modules. |
 | Account administration | Admin-only Gate and User model | Internal | Admins create/update/deactivate accounts; user records remain for order ownership/history. |
 | Email/SMS | Mail or SMS provider | External | Mentioned by the SDD but not configured as a product workflow. Provider, cost, and notification requirements are open. |
@@ -141,6 +144,7 @@ Customers may also attach one JPG, PNG, or PDF artwork file (up to 10 MB) to the
 | Admin order report | Admin | Filter order activity by date range; see order statuses, completed order value, and active/hidden catalog counts; browser print. | Partial |
 | Customer account settings | Active account | Edit own name/email/phone; change password after current-password check. | Partial |
 | Admin account management | Admin | Search/filter users; create/update customer, employee, admin roles; deactivate; protect last active admin. | Partial |
+| Staff supply inventory | Employee/admin | Create/edit/deactivate supplies and suppliers; receive/use/stocktake; review low stock and movement history. | Partial |
 | Admin dashboard | Employee/admin | Links to shop operations; Reports/Accounts visible only to admin. | Partial |
 | Admin product/service management | Employee/admin | List, create, edit, hide/show, delete; stale updates are rejected. | Implemented at CRUD level |
 
@@ -156,15 +160,23 @@ No payment, SMS, or custom email API is called. Internal route authorization use
 erDiagram
     USERS ||--o| CARTS : owns
     CARTS ||--o{ CART_ITEMS : contains
+    PRODUCTS ||--o{ PRODUCT_VARIANTS : has
     PRODUCTS o|--o{ CART_ITEMS : referenced_by
+    PRODUCT_VARIANTS ||--o{ CART_ITEMS : selected_variant
     SERVICES o|--o{ CART_ITEMS : referenced_by
     USERS ||--o{ ORDERS : places
     ORDERS ||--|{ ORDER_ITEMS : snapshots
     PRODUCTS o|--o{ ORDER_ITEMS : source
+    PRODUCT_VARIANTS o|--o{ ORDER_ITEMS : variant_snapshot
     SERVICES o|--o{ ORDER_ITEMS : source
+    INVENTORY_ITEMS }o--o{ SUPPLIERS : sourced_from
+    INVENTORY_ITEMS ||--o{ INVENTORY_MOVEMENTS : records
+    PRODUCT_VARIANTS }o--o{ INVENTORY_ITEMS : consumes_via_recipe
+    SUPPLIERS o|--o{ INVENTORY_MOVEMENTS : received_from
+    USERS ||--o{ INVENTORY_MOVEMENTS : records
 ```
 
-`users` has a one-to-zero-or-one relationship with `carts` (`carts.user_id` is unique) and a one-to-many relationship with `orders`. A cart has zero or more items. Each cart item references either a product or a service; the application enforces this exclusive choice, while the schema does not currently include an XOR check constraint. An order belongs to one user and has one or more item snapshots. Order-item links to products/services are nullable and use `ON DELETE SET NULL`; snapshot fields preserve history if a catalog record is deleted. There are still no payment, inventory, supplier, address, or separate design entities.
+`users` has a one-to-zero-or-one relationship with `carts` (`carts.user_id` is unique) and a one-to-many relationship with `orders` and `inventory_movements`. A cart has zero or more items. Each cart item references either a product or a service; the application enforces this exclusive choice, while the schema does not currently include an XOR check constraint. Each product now has one or more variants; cart and order records keep the selected variant so pricing and option metadata stay stable even if the catalog later changes. An order belongs to one user and has one or more item snapshots. Order-item links to products/services are nullable and use `ON DELETE SET NULL`; snapshot fields preserve history if a catalog record is deleted. Product variants can consume raw supplies via a `product_variant_supplies` recipe, and when an order moves to `processing` (or a quote is accepted) the system validates that recipe and deducts the required quantity. Inventory items represent raw supplies, not finished catalog products. Supplies link to multiple suppliers; movement history records each balance change and actor. Payment/address entities are still absent.
 
 ### 7.2 Current Data Dictionary
 
@@ -181,12 +193,23 @@ erDiagram
 | `products` | `id` | Integer primary key | Catalog identifier. |
 | `products` | `name` | String, required | Product title. |
 | `products` | `description` | Nullable text | Product details. |
-| `products` | `price` | Decimal(10,2), default 0 | Product price. Validation requires at least 0.01 through admin forms. |
-| `products` | `paper_size`, `paper_weight`, `paper_finish` | Nullable strings (80) | Optional paper specifications. |
+| `products` | `category` | String, default `paper`, indexed | Finished-item category such as `paper`, `mug`, `shirt`, `tarpaulin`, or `other`. |
+| `products` | `price` | Decimal(10,2), default 0 | Base/default price for the standard variant. |
+| `products` | `paper_size`, `paper_weight`, `paper_finish` | Nullable strings (80) | Optional paper specifications for legacy paper-based products. |
 | `products` | `image_path` | Nullable string | Path to optional catalog image on the public storage disk. |
 | `products` | `is_active` | Boolean, indexed, default true | Whether customers can see the product. |
 | `products` | `lock_version` | Unsigned integer, default 0 | Optimistic concurrency version for catalog edits. |
 | `products` | timestamps | Datetime | Created/updated times. |
+| `product_variants` | `id` | Integer primary key | Product option/variant identifier. |
+| `product_variants` | `product_id` | Foreign key to `products.id`, cascade on delete | Parent product. |
+| `product_variants` | `name`, `sku` | String, optional unique SKU | Variant name such as `Large / Black` and optional stock code. |
+| `product_variants` | `options` | JSON | Customer-visible option values such as size, color, or dimensions. |
+| `product_variants` | `price` | Decimal(10,2) | Variant-specific price charged when this option is selected. |
+| `product_variants` | `is_default`, `is_active` | Boolean flags | Default variant is used for legacy compatibility; inactive variants are hidden from customers. |
+| `product_variants` | `lock_version` | Unsigned integer, default 0 | Optimistic concurrency version for variant edits. |
+| `product_variants` | timestamps | Datetime | Created/updated times. |
+| `product_variant_supplies` | `product_variant_id`, `inventory_item_id` | Composite primary key and foreign keys | Recipe linking a finished variant to the raw supplies consumed per unit. |
+| `product_variant_supplies` | `quantity_per_unit` | Decimal(12,3) | Raw material quantity needed for one finished unit. |
 | `services` | `id` | Integer primary key | Service identifier. |
 | `services` | `name` | String, required | Service title. |
 | `services` | `description` | Nullable text | Service details. |
@@ -201,9 +224,10 @@ erDiagram
 | `cart_items` | `id` | Integer primary key | Cart line identifier. |
 | `cart_items` | `cart_id` | Foreign key to `carts.id`, cascade on delete | Parent cart. |
 | `cart_items` | `product_id` | Nullable foreign key to `products.id`, cascade on delete | Product target when the line is a product. |
+| `cart_items` | `product_variant_id` | Nullable foreign key to `product_variants.id`, set null on delete | Selected product variant for that cart line. |
 | `cart_items` | `service_id` | Nullable foreign key to `services.id`, cascade on delete | Service target when the line is a service. |
 | `cart_items` | `quantity` | Unsigned integer, default 1 | Requested quantity; application validation limits it to 1-99. |
-| `cart_items` | `(cart_id, product_id)` | Composite unique index | Prevents duplicate product lines in one cart. |
+| `cart_items` | `(cart_id, product_variant_id)` | Composite unique index | Prevents duplicate selections of the exact same product variant in one cart. |
 | `cart_items` | `(cart_id, service_id)` | Composite unique index | Prevents duplicate service lines in one cart. |
 | `cart_items` | timestamps | Datetime | Line created/updated times. |
 | `orders` | `id` | Integer primary key | Order identifier. |
@@ -217,19 +241,45 @@ erDiagram
 | `orders` | timestamps | Datetime | Order created/updated times. |
 | `order_items` | `id` | Integer primary key | Order-line identifier. |
 | `order_items` | `order_id` | Foreign key to `orders.id`, cascade on delete | Parent order. |
-| `order_items` | `product_id`, `service_id` | Nullable foreign keys, set null on delete | Optional source catalog records; snapshots remain if source is deleted. Exactly one source is enforced in application flow, not by a database check. |
+| `order_items` | `product_id`, `product_variant_id`, `service_id` | Nullable foreign keys, set null on delete | Optional source catalog records; snapshots remain if source is deleted. Exactly one source is enforced in application flow, not by a database check. |
 | `order_items` | `item_name`, `item_description` | String, nullable text | Purchase-time display snapshots. |
 | `order_items` | `unit_price` | Nullable Decimal(10,2) | Purchase-time unit price; null denotes an item requiring a quote. |
 | `order_items` | `quantity` | Unsigned integer | Quantity submitted from cart. |
+| `order_items` | `variant_name` | Nullable string | Selected product variant name, such as `Large / Black`. |
+| `order_items` | `variant_options` | Nullable JSON | Selected option details captured at the time of order submission. |
 | `order_items` | `paper_size`, `paper_weight`, `paper_finish` | Nullable strings (80) | Product paper-option snapshots. |
 | `order_items` | timestamps | Datetime | Order-line created/updated times. |
+| `suppliers` | `id` | Integer primary key | Supplier identifier. |
+| `suppliers` | `name` | String, required | Supplier name. |
+| `suppliers` | `email`, `phone`, `address` | Nullable strings | Supplier contact details. |
+| `suppliers` | `is_active` | Boolean, indexed, default true | Whether staff can select the supplier for new receipts; historical movements remain. |
+| `suppliers` | timestamps | Datetime | Supplier timestamps. |
+| `inventory_items` | `id` | Integer primary key | Raw-supply identifier. |
+| `inventory_items` | `name`, `sku` | Required string name; nullable unique SKU | Supply name and optional stock code; separate rows can represent sizes/colors. |
+| `inventory_items` | `category` | Indexed string | `paper`, `blank_mug`, `blank_shirt`, `tarpaulin_material`, `ink`, or `other`. |
+| `inventory_items` | `unit` | String(32) | Counting unit, for example sheet, piece, meter, roll, or bottle. |
+| `inventory_items` | `quantity_on_hand` | Decimal(12,3), default 0 | Current supply balance; changed through movement recording. |
+| `inventory_items` | `reorder_level` | Decimal(12,3), default 0 | Active supplies at/below this level are low stock. |
+| `inventory_items` | `is_active` | Boolean, indexed, default true | Inactive supply record is retained but excluded from active operations. |
+| `inventory_items` | `lock_version` | Unsigned integer, default 0 | Optimistic locking for metadata edits. |
+| `inventory_item_supplier` | `inventory_item_id`, `supplier_id` | Composite primary key, cascading foreign keys | Many-to-many supplier association for a supply. |
+| `inventory_movements` | `id` | Integer primary key | Stock movement identifier. |
+| `inventory_movements` | `inventory_item_id` | Foreign key, restrict on delete | Supply whose balance changed. |
+| `inventory_movements` | `supplier_id` | Nullable foreign key, set null on delete | Supplier associated with a receipt. |
+| `inventory_movements` | `user_id` | Foreign key to `users.id`, restrict on delete | Staff member who recorded the movement. |
+| `inventory_movements` | `order_id` | Nullable foreign key to `orders.id`, set null on delete | Order whose production start triggered a material usage deduction. |
+| `inventory_movements` | `type` | String | `received`, `used`, or `stocktake`. |
+| `inventory_movements` | `quantity_change` | Signed Decimal(12,3) | Balance delta; stocktake is counted balance minus prior balance. |
+| `inventory_movements` | `quantity_before`, `quantity_after` | Decimal(12,3) | Balance before/after movement for audit. |
+| `inventory_movements` | `notes` | Nullable text | Receipt reference, usage reason, count notes, or production-order reference. |
+| `inventory_movements` | `created_at` | Timestamp | Movement timestamp; application exposes append-only movements. |
 
 **Future data design to resolve before implementing ordering:**
 
 - Cart and cart-item ownership/quantity/target are implemented. Keep enforcing exactly one catalog target per line in application code, or add a portable database check constraint if supported database engines are finalized.
 - Order and order-item records/snapshots are implemented. Still decide shipping/address, estimated completion, inventory reservation, and payment fields before extending checkout.
 - Payment/transaction records should reference an order and capture amount, method, status, and provider reference; never store payment secrets.
-- Inventory should identify what is stocked (finished products, paper/materials, or both), quantity, restock date, and supplier relationship.
+- Supplies are tracked separately from finished products. Product variants define their own material consumption rates; the next design decision is whether one product can have multiple active recipes or whether recipes should be locked to a single approved production method.
 - Addresses and notification preferences are not current user fields.
 
 **SDD consistency notes:** The supplied data dictionary names both `Transaction Details` and `Transactions` in ways that appear reversed or conflated. Before building those tables, agree on distinct `orders`, `order_items`, and `payments`/`transactions` entities and update the course ERD/data dictionary. The SDD also includes size/material pivots that may describe apparel better than the current paper-print scope; do not implement these without confirming they apply.
@@ -251,6 +301,7 @@ erDiagram
 - Cart routes are protected by the `access-customer` Gate; item lookup is scoped through the signed-in user's cart.
 - Order submission is transactional and locks the cart/lines while it checks active catalog records, copies snapshots, creates the order, and clears cart lines.
 - Customer order routes scope lookups through the authenticated user's `orders()` relation; admin order routes are protected by `access-admin`.
+- Inventory movements use a row-locked transaction, reject negative balances, update `quantity_on_hand`, and append before/after balance history; supplies/suppliers are deactivated rather than hard-deleted.
 - Feature tests use SQLite `:memory:` and `RefreshDatabase`; they do not modify the developer's local database file.
 
 ### 8.2 HCI / UI-UX Notes
@@ -271,11 +322,12 @@ erDiagram
 | Email verification and password reset | 5 Dependencies; 6 Email interface | Laravel verification/password broker notifications | `tests/Feature/AccountManagementTest.php` | Implemented; verification is not enforced for shopping |
 | Separate customer, employee and admin access | 4.1 Account Management | User roles and `access-customer`, `manage-shop`, `access-admin` Gates | Account and catalog feature tests | Implemented baseline permissions |
 | Add/edit/remove/view services | 4.1 Service Management | Employee/admin Service resource, image upload, optimistic lock, customer search/detail | `tests/Feature/CatalogManagementTest.php`; `tests/Feature/CustomerCatalogTest.php` | Partial: option/quote conversation remains |
-| Add/edit/remove/view products | 4.1 Cart/Inventory context; 7 Data Design | Employee/admin Product resource, paper fields/image upload/optimistic lock, customer search/detail | `tests/Feature/CatalogManagementTest.php`; `tests/Feature/CustomerCatalogTest.php` | Partial: variants/stock/set-design relation remain |
-| Display/search product and service information | 6 Home Page | Active-only paginated catalogs with optional images and detail pages | `tests/Feature/CustomerCatalogTest.php` | Partial: set-design selection remains |
+| Add/edit/remove/view products | 4.1 Cart/Inventory context; 7 Data Design | Employee/admin Product resource, category fields, default/selected variants, image upload, optimistic lock, customer search/detail | `tests/Feature/CatalogManagementTest.php`; `tests/Feature/CustomerCatalogTest.php`; `tests/Feature/ProductVariantManagementTest.php` | Partial: variant bundles, richer discovery, and set-design configuration remain |
+| Display/search product and service information | 6 Home Page | Active-only paginated catalogs with optional images, detail pages, and variant selection | `tests/Feature/CustomerCatalogTest.php`; `tests/Feature/ProductVariantManagementTest.php` | Partial: set-design selection remains |
 | Attach custom artwork to order | 1.2 Scope; 6 Order Interface | Private artwork path and owner/staff-only download routes | `tests/Feature/OrderManagementTest.php` | Partial: one attachment per order; no revision conversation |
-| Add/remove/update cart items and total | 4.1 Cart Management; 6 Cart Interface | Cart routes/controller/models/views | `tests/Feature/CartManagementTest.php` | Partial: cart subtotal works; checkout/order total is not final for quote items |
-| Place, track, update, cancel orders | 4.1 Order Management | Customer Order and admin Order resources, order snapshots, constrained state transitions, customer quote acceptance | `tests/Feature/OrderManagementTest.php` | Partial: order requests/statuses work; payment/fulfillment remain |
+| Add/remove/update cart items and total | 4.1 Cart Management; 6 Cart Interface | Cart routes/controller/models/views, selected variant pricing and snapshot retention | `tests/Feature/CartManagementTest.php`; `tests/Feature/ProductVariantManagementTest.php` | Partial: cart subtotal works; checkout/order total is not final for quote items |
+| Place, track, update, cancel orders | 4.1 Order Management | Customer Order and admin Order resources, order snapshots, constrained state transitions, customer quote acceptance, variant-safe order history | `tests/Feature/OrderManagementTest.php`; `tests/Feature/ProductVariantManagementTest.php` | Partial: payment/fulfillment remain |
+| Track raw supply stock and suppliers | 4.1 Inventory Management | Inventory items, supplier associations, movement ledger, low-stock threshold, and recipe-linked material usage | `tests/Feature/InventoryManagementTest.php`; `tests/Feature/OrderManagementTest.php` | Partial: purchase-order/cost valuation remains |
 | Select and process payments | 4.1 Transaction Processing | Payment interface/provider and records | No payment integration/records exist | Planned |
 | Track inventory and suppliers | 4.1 Inventory Management | Inventory/supplier entities and policies | No inventory/supplier model exists | Planned |
 | Generate sales/inventory reports | 4.1 Report Generation | Admin order-activity report with date filters and catalog visibility counts | `tests/Feature/AdminReportTest.php` | Partial: paid sales and stock quantities are not available |
@@ -289,8 +341,8 @@ Recommended order, respecting dependencies:
 1. **Confirm storefront requirements:** decide whether paper specifications are fixed or selectable price-changing options and whether set-design products need customer-customizable text/colors.
 2. **Complete catalog modeling:** add approved design records/options and inventory-linked availability; add catalog seed data for demos.
 3. **Complete cart/order design:** support multiple artwork revisions/attachments if required; add estimated completion and fulfillment/customer notification rules.
-4. **Complete order flow:** add estimated completion/date, fulfillment/customer notification rules, and payment after those requirements are agreed.
-5. **Inventory:** define stock units/materials/suppliers and reserve/check stock during checkout before enabling fulfillment.
+4. **Complete order flow:** add estimated completion/date, fulfillment/customer notification rules, and payment after those requirements are agreed; standardize production scheduling as separate from quote acceptance.
+5. **Complete inventory/order integration:** variant recipes are now defined; confirm approved production recipes, reserve/deduct stock at an agreed production stage, and decide whether some supplies should be treated as reserved rather than immediately consumed.
 6. **Transactions:** agree on manual payment vs gateway, then implement payment records/provider integration and status handling.
 7. **Complete reports:** add payment-backed revenue reports after transaction processing and stock/supplier reports after inventory is implemented; decide export formats and report permissions.
 8. **Notifications and operational hardening:** select providers, add audit trail and backup/deployment plan, and add end-to-end order tests.
@@ -302,7 +354,7 @@ Recommended order, respecting dependencies:
 3. **Custom designs:** Current flow attaches one private JPG/PNG/PDF file to an order and supports quotes. Decide whether customers need multiple files, revision conversations, or upload before cart submission.
 4. **Paper options:** Are size/weight/finish fixed specifications per product or selectable variants that change price? Current fields describe fixed product attributes only.
 5. **Products vs services in a cart:** Confirm both can be purchased in one checkout and whether services are priced directly or quoted.
-6. **Inventory:** Determine if the system tracks finished print stock, raw paper/material stock, or only availability managed by staff.
+6. **Inventory:** Raw supplies are modeled separately from finished products. Define material recipes/consumption rates, supplier purchasing, and whether cost valuation is required.
 7. **Payments and notifications:** Choose supported methods/providers and whether manual staff-recorded payments are required.
 8. **Verification policy:** Decide whether customers must verify email before browsing, ordering, or only before order notifications.
 
@@ -316,3 +368,5 @@ Recommended order, respecting dependencies:
 | 2026-10-11 | Reporting milestone | Added an admin-only date-filtered order activity report and catalog visibility counts; documented that payment-backed sales and inventory reports await their respective data modules. | `tests/Feature/AdminReportTest.php`. |
 | 2026-10-11 | Account/storefront milestone | Added employee role boundaries, account profile/password and email verification/reset flows, admin account management, catalog optimistic locking, and searchable product/service detail pages. | `tests/Feature/AccountManagementTest.php`; `tests/Feature/CustomerCatalogTest.php`; `tests/Feature/CatalogManagementTest.php`. |
 | 2026-10-11 | Media milestone | Added public product/service images and private order artwork attachments with customer/staff download authorization. | `tests/Feature/CatalogManagementTest.php`; `tests/Feature/OrderManagementTest.php`. |
+| 2026-10-12 | Supply inventory milestone | Added supplier records, raw supply balances, receive/use/stocktake movements, low-stock view, and staff screens; kept order consumption decoupled pending production rules. | `tests/Feature/InventoryManagementTest.php`. |
+| 2026-10-12 | Product variant + production consumption milestone | Added product categories, default/selected variants, per-variant pricing and option metadata, supply recipes, and production-time material consumption when orders enter processing or a quote is accepted. | `tests/Feature/ProductVariantManagementTest.php`; `tests/Feature/OrderManagementTest.php`; `tests/Feature/CartManagementTest.php`. |

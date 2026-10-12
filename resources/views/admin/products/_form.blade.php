@@ -7,6 +7,15 @@
         @error('name') <p class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror
     </div>
     <div>
+        <label class="block text-sm font-medium" for="category">Finished product type</label>
+        <select class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="category" name="category" required>
+            @foreach (['paper' => 'Paper product', 'mug' => 'Mug', 'shirt' => 'Shirt', 'tarpaulin' => 'Tarpaulin', 'other' => 'Other'] as $value => $label)
+                <option value="{{ $value }}" @selected(old('category', $product->category ?? 'paper') === $value)>{{ $label }}</option>
+            @endforeach
+        </select>
+        @error('category')<p class="mt-1 text-sm text-red-700">{{ $message }}</p>@enderror
+    </div>
+    <div>
         <label class="block text-sm font-medium" for="description">Description</label>
         <textarea class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="description" name="description" rows="4" maxlength="10000">{{ old('description', $product->description) }}</textarea>
         @error('description') <p class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror

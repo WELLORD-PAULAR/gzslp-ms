@@ -10,6 +10,7 @@ class CartItem extends Model
     protected $fillable = [
         'cart_id',
         'product_id',
+        'product_variant_id',
         'service_id',
         'quantity',
     ];
@@ -36,18 +37,33 @@ class CartItem extends Model
         return $this->belongsTo(Service::class);
     }
 
+    public function productVariant(): BelongsTo
+    {
+        return $this->belongsTo(ProductVariant::class);
+    }
+
     public function getNameAttribute(): ?string
     {
-        return $this->product?->name ?? $this->service?->name;
+        if ($this->product) {
+            return $this->productVariant && (! $this->productVariant->is_default || count($this->productVariant->options ?? []) > 0)
+                ? $this->product->name.' — '.$this->productVariant->name
+                : $this->product->name;
+        }
+
+        return $this->service?->name;
     }
 
     public function getUnitPriceAttribute(): ?string
     {
-        return $this->product?->price ?? $this->service?->starting_price;
+        return $this->productVariant?->price ?? $this->product?->price ?? $this->service?->starting_price;
     }
 
     public function getIsAvailableAttribute(): bool
     {
-        return (bool) ($this->product?->is_active ?? $this->service?->is_active ?? false);
+        if ($this->product) {
+            return $this->product->is_active && ($this->productVariant?->is_active ?? false);
+        }
+
+        return (bool) ($this->service?->is_active ?? false);
     }
 }

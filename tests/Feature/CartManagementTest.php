@@ -16,11 +16,13 @@ test('a customer can add products, accumulate quantities, update and remove cart
         'paper_size' => 'A4',
         'is_active' => true,
     ]);
+    $variant = $product->variants()->firstOrFail();
 
     $this->actingAs($customer)
         ->post(route('cart.items.store'), [
             'item_type' => 'product',
             'item_id' => $product->id,
+            'variant_id' => $variant->id,
             'quantity' => 2,
         ])
         ->assertRedirect(route('cart'));
@@ -28,6 +30,7 @@ test('a customer can add products, accumulate quantities, update and remove cart
     $this->post(route('cart.items.store'), [
         'item_type' => 'product',
         'item_id' => $product->id,
+        'variant_id' => $variant->id,
         'quantity' => 3,
     ])->assertRedirect(route('cart'));
 
@@ -54,6 +57,7 @@ test('a customer can add products, accumulate quantities, update and remove cart
 test('a customer can add a quote-only service and the cart marks the total as pending', function () {
     $customer = User::factory()->create();
     $product = Product::create(['name' => 'Basic Print', 'price' => '7.50', 'is_active' => true]);
+    $variant = $product->variants()->firstOrFail();
     $service = Service::create([
         'name' => 'Custom Artwork',
         'starting_price' => null,
@@ -64,6 +68,7 @@ test('a customer can add a quote-only service and the cart marks the total as pe
         ->post(route('cart.items.store'), [
             'item_type' => 'product',
             'item_id' => $product->id,
+            'variant_id' => $variant->id,
             'quantity' => 1,
         ])
         ->assertRedirect(route('cart'));
@@ -87,8 +92,9 @@ test('cart items belong only to their customer', function () {
     $owner = User::factory()->create();
     $otherCustomer = User::factory()->create();
     $product = Product::create(['name' => 'Print', 'price' => '5.00', 'is_active' => true]);
+    $variant = $product->variants()->firstOrFail();
     $cart = $owner->cart()->create();
-    $cartItem = $cart->items()->create(['product_id' => $product->id, 'quantity' => 1]);
+    $cartItem = $cart->items()->create(['product_id' => $product->id, 'product_variant_id' => $variant->id, 'quantity' => 1]);
 
     $this->actingAs($otherCustomer)
         ->patch(route('cart.items.update', $cartItem), ['quantity' => 4])
@@ -100,11 +106,13 @@ test('cart items belong only to their customer', function () {
 test('inactive items cannot be added and admins cannot use customer carts', function () {
     $customer = User::factory()->create();
     $inactiveProduct = Product::create(['name' => 'Hidden print', 'price' => '5.00', 'is_active' => false]);
+    $inactiveVariant = $inactiveProduct->variants()->firstOrFail();
 
     $this->actingAs($customer)
         ->post(route('cart.items.store'), [
             'item_type' => 'product',
             'item_id' => $inactiveProduct->id,
+            'variant_id' => $inactiveVariant->id,
             'quantity' => 1,
         ])
         ->assertNotFound();
@@ -118,12 +126,14 @@ test('inactive items cannot be added and admins cannot use customer carts', func
 test('cart quantities must stay within supported limits', function () {
     $customer = User::factory()->create();
     $product = Product::create(['name' => 'Print', 'price' => '5.00', 'is_active' => true]);
+    $variant = $product->variants()->firstOrFail();
 
     $this->actingAs($customer)
         ->from(route('products.index'))
         ->post(route('cart.items.store'), [
             'item_type' => 'product',
             'item_id' => $product->id,
+            'variant_id' => $variant->id,
             'quantity' => 100,
         ])
         ->assertSessionHasErrors('quantity');
