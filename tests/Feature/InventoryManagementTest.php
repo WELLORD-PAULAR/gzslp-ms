@@ -198,6 +198,40 @@ test('staff can create and deactivate suppliers without deleting supplier histor
         ->and($item->fresh()->suppliers->modelKeys())->toContain($supplier->id);
 });
 
+test('staff can delete a supplier without deleting inventory movement history', function () {
+    $admin = User::factory()->create();
+    $admin->forceFill(['role' => User::ROLE_ADMIN])->save();
+    $supplier = Supplier::create(['name' => 'Paper Wholesaler']);
+    $item = InventoryItem::create([
+        'name' => 'A4 paper',
+        'category' => 'paper',
+        'unit' => 'sheet',
+        'quantity_on_hand' => '20.000',
+        'reorder_level' => '5.000',
+        'is_active' => true,
+    ]);
+    $item->suppliers()->attach($supplier);
+    $movement = InventoryMovement::create([
+        'inventory_item_id' => $item->id,
+        'supplier_id' => $supplier->id,
+        'user_id' => $admin->id,
+        'type' => InventoryMovement::TYPE_RECEIVED,
+        'quantity_change' => '20.000',
+        'quantity_before' => '0.000',
+        'quantity_after' => '20.000',
+        'notes' => 'Opening stock',
+        'created_at' => now(),
+    ]);
+
+    $this->actingAs($admin)
+        ->delete(route('admin.suppliers.destroy', $supplier))
+        ->assertRedirect(route('admin.suppliers.index'));
+
+    $this->assertDatabaseMissing('suppliers', ['id' => $supplier->id]);
+    $this->assertDatabaseHas('inventory_movements', ['id' => $movement->id, 'supplier_id' => null]);
+    expect($item->fresh()->suppliers)->toBeEmpty();
+});
+
 test('inventory and supplier management is staff-only', function () {
     $this->get(route('admin.inventory.index'))->assertRedirect(route('login'));
     $this->get(route('admin.suppliers.index'))->assertRedirect(route('login'));

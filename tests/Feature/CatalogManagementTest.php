@@ -55,6 +55,32 @@ test('an admin can create edit and delete a product', function () {
     $this->assertDatabaseMissing('products', ['id' => $product->id]);
 });
 
+test('admin product creation supports paper, mugs, apparel, tarpaulin, and custom product types', function () {
+    $admin = User::factory()->create();
+    $admin->forceFill(['role' => User::ROLE_ADMIN])->save();
+    $this->actingAs($admin)
+        ->get(route('admin.products.create'))
+        ->assertOk()
+        ->assertSee('Mug')
+        ->assertSee('Shirt / apparel')
+        ->assertSee('Other / custom product');
+
+    foreach (['paper', 'mug', 'shirt', 'tarpaulin', 'other'] as $category) {
+        $this->post(route('admin.products.store'), [
+            'name' => ucfirst($category).' product',
+            'category' => $category,
+            'price' => '12.00',
+            'paper_size' => 'A4',
+        ])->assertRedirect();
+
+        $product = Product::where('name', ucfirst($category).' product')->firstOrFail();
+        expect($product->category)->toBe($category);
+        if ($category !== 'paper') {
+            expect($product->paper_size)->toBeNull();
+        }
+    }
+});
+
 test('an admin can create edit and delete a service', function () {
     $admin = User::factory()->create();
     $admin->forceFill(['role' => User::ROLE_ADMIN])->save();

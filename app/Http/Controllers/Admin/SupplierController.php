@@ -45,4 +45,11 @@ class SupplierController extends Controller
 
         return redirect()->route('admin.suppliers.index')->with('status', 'Supplier updated.');
     }
+
+    public function destroy(Supplier $supplier): RedirectResponse
+    {
+        $supplier->delete();
+
+        return redirect()->route('admin.suppliers.index')->with('status', 'Supplier deleted. Existing inventory movement records were retained.');
+    }
 }

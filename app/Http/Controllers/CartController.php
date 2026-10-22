@@ -8,6 +8,7 @@ use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Product;
 use App\Models\Service;
+use App\Services\InventoryAvailabilityService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -76,6 +77,10 @@ class CartController extends Controller
                     'quantity' => $quantity,
                 ]);
             }
+
+            app(InventoryAvailabilityService::class)->assertCartAvailability(
+                $lockedCart->items()->with('productVariant.supplies')->get(),
+            );
         });
 
         return redirect()->route('cart')->with('status', Str::ucfirst($itemType).' added to your cart.');
@@ -89,7 +94,15 @@ class CartController extends Controller
             return redirect()->route('cart')->withErrors(['cart' => 'This item is no longer available. Remove it from your cart.']);
         }
 
-        $ownedItem->update($request->validated());
+        DB::transaction(function () use ($ownedItem, $request): void {
+            $cart = Cart::query()->whereKey($ownedItem->cart_id)->lockForUpdate()->firstOrFail();
+            $cart->items()->whereKey($ownedItem->id)->lockForUpdate()->firstOrFail()
+                ->update($request->validated());
+
+            app(InventoryAvailabilityService::class)->assertCartAvailability(
+                $cart->items()->with('productVariant.supplies')->get(),
+            );
+        });
 
         return redirect()->route('cart')->with('status', 'Cart quantity updated.');
     }

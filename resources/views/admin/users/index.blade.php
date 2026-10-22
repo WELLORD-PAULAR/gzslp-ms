@@ -12,6 +12,7 @@
     </div>
 
     @if (session('status'))<p class="mt-5 border-l-4 border-emerald-700 bg-white px-4 py-3 text-sm" role="status">{{ session('status') }}</p>@endif
+    @error('account')<p class="mt-5 border-l-4 border-red-700 bg-white px-4 py-3 text-sm text-red-800" role="alert">{{ $message }}</p>@enderror
 
     <form class="mt-6 flex flex-wrap items-end gap-3 print:hidden" method="GET" action="{{ route('admin.users.index') }}">
         <div>
@@ -43,7 +44,7 @@
                         <td class="px-4 py-3">{{ $managedUser->phone ?: '—' }}</td>
                         <td class="px-4 py-3">{{ \Illuminate\Support\Str::headline($managedUser->role) }}</td>
                         <td class="px-4 py-3">{{ $managedUser->is_active ? 'Active' : 'Inactive' }}</td>
-                        <td class="px-4 py-3 text-right"><a class="underline" href="{{ route('admin.users.edit', $managedUser) }}">Manage</a></td>
+                        <td class="px-4 py-3 text-right"><div class="flex justify-end gap-4"><a class="underline" href="{{ route('admin.users.edit', $managedUser) }}">Manage</a>@unless(auth()->user()->is($managedUser))<form method="POST" action="{{ route('admin.users.destroy', $managedUser) }}" onsubmit="return window.confirm('Delete this account? Accounts with order or inventory history cannot be deleted.')">@csrf @method('DELETE')<button class="text-red-700 underline" type="submit">Delete</button></form>@endunless</div></td>
                     </tr>
                 @empty
                     <tr><td class="px-4 py-8 text-center text-gray-500" colspan="5">No accounts match these filters.</td></tr>

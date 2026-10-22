@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Product;
+use App\Models\InventoryItem;
 use App\Models\Service;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -33,6 +34,55 @@ test('customers can search and filter active products and visit detail pages', f
         ->assertSee('name="item_type"', false)
         ->assertSee('value="product"', false)
         ->assertSee('Add to cart');
+});
+
+test('product availability and cart limits are recalculated from current inventory', function () {
+    $customer = User::factory()->create();
+    $product = Product::create([
+        'name' => 'A4 Print',
+        'category' => 'paper',
+        'price' => '5.00',
+        'is_active' => true,
+    ]);
+    $variant = $product->variants()->firstOrFail();
+    $paper = InventoryItem::create([
+        'name' => 'A4 paper',
+        'category' => 'paper',
+        'unit' => 'sheet',
+        'quantity_on_hand' => '10.000',
+        'reorder_level' => '2.000',
+        'is_active' => true,
+    ]);
+    $variant->supplies()->attach($paper, ['quantity_per_unit' => '2.000']);
+
+    $this->actingAs($customer)
+        ->get(route('products.show', $product))
+        ->assertOk()
+        ->assertSee('5 available');
+
+    $this->post(route('cart.items.store'), [
+        'item_type' => 'product',
+        'item_id' => $product->id,
+        'variant_id' => $variant->id,
+        'quantity' => 5,
+    ])->assertRedirect(route('cart'));
+
+    $paper->update(['quantity_on_hand' => '8.000']);
+
+    $this->get(route('products.show', $product))->assertSee('4 available');
+    $this->from(route('cart'))
+        ->post(route('cart.items.store'), [
+            'item_type' => 'product',
+            'item_id' => $product->id,
+            'variant_id' => $variant->id,
+            'quantity' => 1,
+        ])
+        ->assertSessionHasErrors('quantity');
+
+    $cartItem = $customer->cart()->firstOrFail()->items()->firstOrFail();
+    $this->patch(route('cart.items.update', $cartItem), ['quantity' => 4])
+        ->assertRedirect(route('cart'));
+    expect($cartItem->fresh()->quantity)->toBe(4);
 });
 
 test('customers can search active services and visit service details', function () {

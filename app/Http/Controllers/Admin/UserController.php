@@ -95,4 +95,24 @@ class UserController extends Controller
 
         return redirect()->route('admin.users.index')->with('status', 'Account updated.');
     }
+
+    public function destroy(Request $request, User $user): RedirectResponse
+    {
+        if ($request->user()->is($user)) {
+            return back()->withErrors(['account' => 'You cannot delete the account you are currently using.']);
+        }
+
+        if ($user->isAdmin() && $user->isActive()
+            && User::where('role', User::ROLE_ADMIN)->where('is_active', true)->count() <= 1) {
+            return back()->withErrors(['account' => 'The last active administrator cannot be deleted.']);
+        }
+
+        if ($user->orders()->exists() || $user->inventoryMovements()->exists()) {
+            return back()->withErrors(['account' => 'This account has order or inventory history. Deactivate it to preserve those records.']);
+        }
+
+        $user->delete();
+
+        return redirect()->route('admin.users.index')->with('status', 'Account deleted.');
+    }
 }

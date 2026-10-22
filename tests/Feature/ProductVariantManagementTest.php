@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\InventoryItem;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\User;
@@ -118,4 +119,37 @@ test('a stale product variant edit is rejected', function () {
 
     expect($variant->fresh()->name)->toBe('2m x 3m')
         ->and($product->fresh()->price)->toBe('35.00');
+});
+
+test('staff can delete a variant while retaining order snapshots and removing stale cart items', function () {
+    $admin = User::factory()->create();
+    $admin->forceFill(['role' => User::ROLE_ADMIN])->save();
+    $customer = User::factory()->create();
+    $product = Product::create(['name' => 'Printed Mug', 'category' => 'mug', 'price' => '12.00']);
+    $variant = $product->variants()->firstOrFail();
+    $cart = $customer->cart()->create();
+    $cartItem = $cart->items()->create([
+        'product_id' => $product->id,
+        'product_variant_id' => $variant->id,
+        'quantity' => 2,
+    ]);
+    $order = $customer->orders()->create(['status' => Order::STATUS_PENDING, 'subtotal' => '24.00']);
+    $orderItem = $order->items()->create([
+        'product_id' => $product->id,
+        'product_variant_id' => $variant->id,
+        'variant_name' => 'Standard',
+        'variant_options' => [],
+        'item_name' => $product->name,
+        'quantity' => 2,
+        'unit_price' => '12.00',
+    ]);
+
+    $this->actingAs($admin)
+        ->delete(route('admin.products.variants.destroy', [$product, $variant]))
+        ->assertRedirect(route('admin.products.variants.index', $product));
+
+    $this->assertDatabaseMissing('product_variants', ['id' => $variant->id]);
+    $this->assertDatabaseMissing('cart_items', ['id' => $cartItem->id]);
+    expect($orderItem->fresh()->product_variant_id)->toBeNull()
+        ->and($orderItem->fresh()->variant_name)->toBe('Standard');
 });

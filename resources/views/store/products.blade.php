@@ -40,6 +40,7 @@
         @forelse ($products as $product)
             <article class="border-y border-gray-200 py-6">
                 @if ($product->image_path)<img class="mb-4 aspect-[4/3] w-full max-w-lg rounded border border-gray-200 object-cover" src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($product->image_path) }}" alt="{{ $product->name }}">@endif
+                <p class="text-sm font-semibold uppercase text-gray-500">{{ \Illuminate\Support\Str::headline($product->category) }}</p>
                 <h2 class="text-xl font-semibold"><a class="underline decoration-transparent hover:decoration-current" href="{{ route('products.show', $product) }}">{{ $product->name }}</a></h2>
                 @if ($product->description)
                     <p class="mt-2 text-gray-600">{{ $product->description }}</p>
@@ -51,6 +52,13 @@
                         @if ($product->paper_finish) <span class="mx-1">&middot;</span> Finish: {{ $product->paper_finish }} @endif
                     </p>
                 @endif
+                @php
+                    $hasTrackedVariant = $product->variants->contains(fn ($variant) => $variant->availableQuantity() !== null);
+                    $hasAvailableVariant = $product->variants->contains(fn ($variant) => $variant->availableQuantity() === null || $variant->availableQuantity() > 0);
+                @endphp
+                <p class="mt-3 text-sm {{ $hasAvailableVariant ? 'text-emerald-800' : 'font-medium text-red-700' }}">
+                    {{ ! $hasTrackedVariant ? 'Inventory not tracked' : ($hasAvailableVariant ? 'Available' : 'Out of stock') }}
+                </p>
                 <p class="mt-4 font-medium">From {{ number_format((float) $product->variants->min('price'), 2) }}</p>
                 <a class="mt-4 inline-flex rounded border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-white" href="{{ route('products.show', $product) }}">Choose options</a>
             </article>

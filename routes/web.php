@@ -61,7 +61,7 @@ Route::middleware('auth')->group(function () {
         $products = Product::query()
             ->where('is_active', true)
             ->whereHas('variants', fn ($query) => $query->where('is_active', true))
-            ->with(['variants' => fn ($query) => $query->where('is_active', true)])
+            ->with(['variants' => fn ($query) => $query->where('is_active', true)->with('supplies')])
             ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
                 ->where('name', 'like', '%'.$search.'%')
                 ->orWhere('description', 'like', '%'.$search.'%')))
@@ -80,7 +80,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/products/{product}', function (Product $product) {
         abort_unless($product->is_active, 404);
-        $product->load(['variants' => fn ($query) => $query->where('is_active', true)->orderByDesc('is_default')->orderBy('name')]);
+        $product->load(['variants' => fn ($query) => $query->where('is_active', true)->with('supplies')->orderByDesc('is_default')->orderBy('name')]);
         abort_if($product->variants->isEmpty(), 404);
 
         return view('store.product-show', compact('product'));
@@ -139,6 +139,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/products/{product}/variants', [ProductVariantController::class, 'store'])->name('products.variants.store');
         Route::get('/products/{product}/variants/{productVariant}/edit', [ProductVariantController::class, 'edit'])->name('products.variants.edit');
         Route::put('/products/{product}/variants/{productVariant}', [ProductVariantController::class, 'update'])->name('products.variants.update');
+        Route::delete('/products/{product}/variants/{productVariant}', [ProductVariantController::class, 'destroy'])->name('products.variants.destroy');
         Route::resource('services', ServiceController::class)->except('show');
         Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
         Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
@@ -151,10 +152,10 @@ Route::middleware('auth')->group(function () {
         Route::put('/inventory/{inventoryItem}', [InventoryController::class, 'update'])->name('inventory.update');
         Route::get('/inventory/{inventoryItem}', [InventoryController::class, 'show'])->name('inventory.show');
         Route::post('/inventory/{inventoryItem}/movements', [InventoryController::class, 'recordMovement'])->name('inventory.movements.store');
-        Route::resource('suppliers', SupplierController::class)->except(['show', 'destroy']);
+        Route::resource('suppliers', SupplierController::class)->except('show');
         Route::middleware('can:access-admin')->group(function () {
             Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
-            Route::resource('users', AdminUserController::class)->except(['show', 'destroy']);
+            Route::resource('users', AdminUserController::class)->except('show');
         });
     });
 

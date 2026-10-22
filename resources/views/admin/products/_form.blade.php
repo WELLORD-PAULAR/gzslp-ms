@@ -9,10 +9,11 @@
     <div>
         <label class="block text-sm font-medium" for="category">Finished product type</label>
         <select class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="category" name="category" required>
-            @foreach (['paper' => 'Paper product', 'mug' => 'Mug', 'shirt' => 'Shirt', 'tarpaulin' => 'Tarpaulin', 'other' => 'Other'] as $value => $label)
+            @foreach (['paper' => 'Paper product', 'mug' => 'Mug', 'shirt' => 'Shirt / apparel', 'tarpaulin' => 'Tarpaulin', 'other' => 'Other / custom product'] as $value => $label)
                 <option value="{{ $value }}" @selected(old('category', $product->category ?? 'paper') === $value)>{{ $label }}</option>
             @endforeach
         </select>
+        <p class="mt-1 text-sm text-gray-500">For mugs, shirts, and custom products, define sizes, colors, and other options after saving.</p>
         @error('category')<p class="mt-1 text-sm text-red-700">{{ $message }}</p>@enderror
     </div>
     <div>
@@ -33,7 +34,9 @@
         <input class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="price" name="price" type="number" min="0.01" max="99999999.99" step="0.01" value="{{ old('price', $product->price) }}" required>
         @error('price') <p class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror
     </div>
-    <div class="grid gap-4 sm:grid-cols-3">
+    <fieldset class="rounded border border-gray-200 p-4">
+        <legend class="px-1 text-sm font-medium">Paper specifications <span class="font-normal text-gray-500">(optional; paper products only)</span></legend>
+        <div class="grid gap-4 sm:grid-cols-3">
         <div>
             <label class="block text-sm font-medium" for="paper_size">Paper size</label>
             <input class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="paper_size" name="paper_size" value="{{ old('paper_size', $product->paper_size) }}" placeholder="A4, A5">
@@ -49,7 +52,8 @@
             <input class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="paper_finish" name="paper_finish" value="{{ old('paper_finish', $product->paper_finish) }}" placeholder="Matte, gloss">
             @error('paper_finish') <p class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror
         </div>
-    </div>
+        </div>
+    </fieldset>
     <label class="flex items-center gap-2 text-sm"><input name="is_active" type="checkbox" value="1" @checked(old('is_active', $product->exists ? $product->is_active : true))>Visible in the customer catalog</label>
     @error('is_active') <p class="text-sm text-red-700">{{ $message }}</p> @enderror
 </div>

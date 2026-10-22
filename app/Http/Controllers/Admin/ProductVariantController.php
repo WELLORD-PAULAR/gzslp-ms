@@ -102,6 +102,18 @@ class ProductVariantController extends Controller
         return redirect()->route('admin.products.variants.index', $product)->with('status', 'Product variant updated.');
     }
 
+    public function destroy(Product $product, ProductVariant $productVariant): RedirectResponse
+    {
+        $this->ensureVariantBelongsToProduct($product, $productVariant);
+
+        DB::transaction(function () use ($productVariant): void {
+            DB::table('cart_items')->where('product_variant_id', $productVariant->id)->delete();
+            $productVariant->delete();
+        });
+
+        return redirect()->route('admin.products.variants.index', $product)->with('status', 'Product variant deleted.');
+    }
+
     private function optionNames(Product $product): array
     {
         return match ($product->category) {

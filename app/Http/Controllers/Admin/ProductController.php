@@ -19,7 +19,7 @@ class ProductController extends Controller
     public function index(): View
     {
         return view('admin.products.index', [
-            'products' => Product::with('variants')->latest()->get(),
+            'products' => Product::with('variants.supplies')->latest()->get(),
         ]);
     }
 
@@ -39,6 +39,11 @@ class ProductController extends Controller
         $data = $request->validated();
         unset($data['image']);
         $data['category'] = $data['category'] ?? 'paper';
+        if ($data['category'] !== 'paper') {
+            $data['paper_size'] = null;
+            $data['paper_weight'] = null;
+            $data['paper_finish'] = null;
+        }
         $data['is_active'] = $request->boolean('is_active');
         $data['image_path'] = $request->file('image')?->store('products', 'public');
 
@@ -65,6 +70,11 @@ class ProductController extends Controller
         unset($data['lock_version']);
         unset($data['image']);
         $data['category'] = $data['category'] ?? $product->category;
+        if ($data['category'] !== 'paper') {
+            $data['paper_size'] = null;
+            $data['paper_weight'] = null;
+            $data['paper_finish'] = null;
+        }
         $data['is_active'] = $request->boolean('is_active');
         $newImagePath = $request->file('image')?->store('products', 'public');
 

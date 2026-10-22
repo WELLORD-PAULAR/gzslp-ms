@@ -119,6 +119,29 @@ test('the last active administrator cannot be demoted or deactivated', function 
         ->and($admin->fresh()->is_active)->toBeTrue();
 });
 
+test('an admin can delete an account without history but cannot delete the current or historical account', function () {
+    $admin = User::factory()->create();
+    $admin->forceFill(['role' => User::ROLE_ADMIN])->save();
+    $customer = User::factory()->create();
+    $customerWithOrder = User::factory()->create();
+    $customerWithOrder->orders()->create(['status' => Order::STATUS_PENDING, 'subtotal' => '10.00']);
+
+    $this->actingAs($admin)
+        ->delete(route('admin.users.destroy', $customer))
+        ->assertRedirect(route('admin.users.index'));
+    $this->assertDatabaseMissing('users', ['id' => $customer->id]);
+
+    $this->delete(route('admin.users.destroy', $customerWithOrder))
+        ->assertRedirect()
+        ->assertSessionHasErrors('account');
+    $this->assertDatabaseHas('users', ['id' => $customerWithOrder->id]);
+
+    $this->delete(route('admin.users.destroy', $admin))
+        ->assertRedirect()
+        ->assertSessionHasErrors('account');
+    $this->assertDatabaseHas('users', ['id' => $admin->id]);
+});
+
 test('employees can manage shop operations but cannot access admin-only reports or accounts', function () {
     $employee = User::factory()->create();
     $employee->forceFill(['role' => User::ROLE_EMPLOYEE])->save();
