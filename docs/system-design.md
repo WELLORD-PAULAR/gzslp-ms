@@ -2,7 +2,7 @@
 
 **Document type:** Living, repository-local system design description  
 **Source:** ENGGSF2 Software Design Document, Prelim Design Check, dated 2026-08-22  
-**Last reviewed:** 2026-10-22
+**Last reviewed:** 2026-10-23
 **Implementation status:** Early MVP; this document distinguishes implemented behavior from proposed work.
 
 This document mirrors the supplied SDD's organization while describing the application as it exists in this repository. It is not a replacement for the course SDD or the approved SRS. Keep the course document and this implementation record aligned as requirements and code change.
@@ -156,127 +156,179 @@ No payment, SMS, or custom email API is called. Internal route authorization use
 
 ### 7.1 Current Entities and Relationships
 
+The canonical attribute-level ERD is maintained in [`erd.mmd`](./erd.mmd). It contains all 13 application data tables, uses the SQLite `INTEGER`, `VARCHAR`, `DECIMAL`, `TEXT`, `JSON`, `BOOLEAN`, `TIMESTAMP`, and `DATETIME` type names, and marks primary, foreign, and unique keys. The relationships are split below into bounded views for legibility; together they cover the full schema.
+
+**Accounts, cart, and order snapshots**
+
 ```mermaid
 erDiagram
     USERS ||--o| CARTS : owns
-    CARTS ||--o{ CART_ITEMS : contains
-    PRODUCTS ||--o{ PRODUCT_VARIANTS : has
-    PRODUCTS o|--o{ CART_ITEMS : referenced_by
-    PRODUCT_VARIANTS ||--o{ CART_ITEMS : selected_variant
-    SERVICES o|--o{ CART_ITEMS : referenced_by
     USERS ||--o{ ORDERS : places
-    ORDERS ||--|{ ORDER_ITEMS : snapshots
-    PRODUCTS o|--o{ ORDER_ITEMS : source
-    PRODUCT_VARIANTS o|--o{ ORDER_ITEMS : variant_snapshot
-    SERVICES o|--o{ ORDER_ITEMS : source
-    INVENTORY_ITEMS }o--o{ SUPPLIERS : sourced_from
-    INVENTORY_ITEMS ||--o{ INVENTORY_MOVEMENTS : records
-    PRODUCT_VARIANTS }o--o{ INVENTORY_ITEMS : consumes_via_recipe
-    SUPPLIERS o|--o{ INVENTORY_MOVEMENTS : received_from
-    USERS ||--o{ INVENTORY_MOVEMENTS : records
+    CARTS ||--o{ CART_ITEMS : contains
+    PRODUCTS o|--o{ CART_ITEMS : selected_product
+    PRODUCT_VARIANTS o|--o{ CART_ITEMS : selected_variant
+    SERVICES o|--o{ CART_ITEMS : selected_service
+    PRODUCTS ||--o{ PRODUCT_VARIANTS : has
+    ORDERS ||--o{ ORDER_ITEMS : contains
+    PRODUCTS o|--o{ ORDER_ITEMS : source_product
+    PRODUCT_VARIANTS o|--o{ ORDER_ITEMS : source_variant
+    SERVICES o|--o{ ORDER_ITEMS : source_service
 ```
 
-`users` has a one-to-zero-or-one relationship with `carts` (`carts.user_id` is unique) and a one-to-many relationship with `orders` and `inventory_movements`. A cart has zero or more items. Each cart item references either a product or a service; the application enforces this exclusive choice, while the schema does not currently include an XOR check constraint. Each product now has one or more variants; cart and order records keep the selected variant so pricing and option metadata stay stable even if the catalog later changes. An order belongs to one user and has one or more item snapshots. Order-item links to products/services are nullable and use `ON DELETE SET NULL`; snapshot fields preserve history if a catalog record is deleted. Product variants can consume raw supplies via a `product_variant_supplies` recipe, and when an order moves to `processing` (or a quote is accepted) the system validates that recipe and deducts the required quantity. Inventory items represent raw supplies, not finished catalog products. Supplies link to multiple suppliers; movement history records each balance change and actor. Payment/address entities are still absent.
+**Product recipes and raw supplies**
+
+```mermaid
+erDiagram
+    PRODUCTS ||--o{ PRODUCT_VARIANTS : has
+    PRODUCT_VARIANTS ||--o{ PRODUCT_VARIANT_SUPPLIES : recipe_lines
+    INVENTORY_ITEMS ||--o{ PRODUCT_VARIANT_SUPPLIES : recipe_material
+```
+
+**Supplier and movement history**
+
+```mermaid
+erDiagram
+    INVENTORY_ITEMS ||--o{ INVENTORY_ITEM_SUPPLIER : supply_links
+    SUPPLIERS ||--o{ INVENTORY_ITEM_SUPPLIER : supplier_links
+    INVENTORY_ITEMS ||--o{ INVENTORY_MOVEMENTS : has_history
+    SUPPLIERS o|--o{ INVENTORY_MOVEMENTS : receipt_source
+    USERS ||--o{ INVENTORY_MOVEMENTS : records
+    ORDERS o|--o{ INVENTORY_MOVEMENTS : production_usage
+```
+
+`users` has a one-to-zero-or-one relationship with `carts` (`carts.user_id` is unique), and one-to-many relationships with `orders` and `inventory_movements`. A cart and an order can have zero or more lines at the database level; the order-submission workflow rejects empty carts. Each cart/order line is intended to reference exactly one product or service. This XOR rule is validated in application code, not by a database `CHECK`; that is a deliberate portable-schema choice and remains a documented integrity boundary.
+
+Every product has a default variant created by the application, and a product may have additional variants. Product and variant prices are maintained together for the default variant; the variant is the selected product's price source. `product_id` remains on product cart/order lines in addition to `product_variant_id`: carts need the product FK's cascade-delete behavior, and order snapshots retain a nullable direct catalog link when variant/catalog records are removed. Order-item display, price, paper, and variant values are snapshots; nullable catalog references use `ON DELETE SET NULL` so the order history survives catalog deletion.
+
+`inventory_item_supplier` and `product_variant_supplies` are explicit composite-key join tables, not implicit many-to-many lines. A recipe row records the raw quantity needed per finished variant. `inventory_movements` is append-only through application workflows and records before/after balances, actor, and optional supplier/order references. When production starts, the application checks required quantities while holding database locks and rejects a deduction that would make stock negative; the current schema does not declare a portable database `CHECK (quantity_on_hand >= 0)`. Inventory item categories and status/type/role columns are strings with application-validated allowed values, not database enums. Payment/address entities are absent.
 
 ### 7.2 Current Data Dictionary
 
+The dictionary below reflects the migrations. For the SQLite-backed implementation, Laravel `id` and `foreignId` columns are represented as `INTEGER`; `string` is `VARCHAR(255)` unless a length is shown; timestamp columns retain the migration's timestamp/datetime distinction. DECIMAL precision and scale are stated explicitly. `NOT NULL`, `NULL`, defaults, indexes, uniqueness, FK targets, and delete behavior are part of each field's constraint description.
+
 | Table | Field | Type / constraint | Meaning |
 |---|---|---|---|
-| `users` | `id` | Integer primary key | Account identifier. |
-| `users` | `name` | String, required | Display name. |
-| `users` | `email` | String, unique, required | Login identifier. |
-| `users` | `password` | String, hashed by model cast | Credential hash. |
-| `users` | `role` | String, indexed, default `customer` | Authorization role: `customer`, `employee`, or `admin`; public signup cannot assign it. |
-| `users` | `phone` | Nullable Varchar(25) | Optional contact number. |
-| `users` | `is_active` | Boolean, indexed, default true | Inactive accounts cannot sign in or access protected account/store routes. |
-| `users` | `email_verified_at`, `remember_token`, timestamps | Nullable/framework fields | Framework account/session support. |
-| `products` | `id` | Integer primary key | Catalog identifier. |
-| `products` | `name` | String, required | Product title. |
-| `products` | `description` | Nullable text | Product details. |
-| `products` | `category` | String, default `paper`, indexed | Finished-item category such as `paper`, `mug`, `shirt`, `tarpaulin`, or `other`. |
-| `products` | `price` | Decimal(10,2), default 0 | Base/default price for the standard variant. |
-| `products` | `paper_size`, `paper_weight`, `paper_finish` | Nullable strings (80) | Optional paper specifications for legacy paper-based products. |
-| `products` | `image_path` | Nullable string | Path to optional catalog image on the public storage disk. |
-| `products` | `is_active` | Boolean, indexed, default true | Whether customers can see the product. |
-| `products` | `lock_version` | Unsigned integer, default 0 | Optimistic concurrency version for catalog edits. |
-| `products` | timestamps | Datetime | Created/updated times. |
-| `product_variants` | `id` | Integer primary key | Product option/variant identifier. |
-| `product_variants` | `product_id` | Foreign key to `products.id`, cascade on delete | Parent product. |
-| `product_variants` | `name`, `sku` | String, optional unique SKU | Variant name such as `Large / Black` and optional stock code. |
-| `product_variants` | `options` | JSON | Customer-visible option values such as size, color, or dimensions. |
-| `product_variants` | `price` | Decimal(10,2) | Variant-specific price charged when this option is selected. |
-| `product_variants` | `is_default`, `is_active` | Boolean flags | Default variant is used for legacy compatibility; inactive variants are hidden from customers. |
-| `product_variants` | `lock_version` | Unsigned integer, default 0 | Optimistic concurrency version for variant edits. |
-| `product_variants` | timestamps | Datetime | Created/updated times. |
-| `product_variant_supplies` | `product_variant_id`, `inventory_item_id` | Composite primary key and foreign keys | Recipe linking a finished variant to the raw supplies consumed per unit. |
-| `product_variant_supplies` | `quantity_per_unit` | Decimal(12,3) | Raw material quantity needed for one finished unit. |
-| `services` | `id` | Integer primary key | Service identifier. |
-| `services` | `name` | String, required | Service title. |
-| `services` | `description` | Nullable text | Service details. |
-| `services` | `starting_price` | Nullable Decimal(10,2) | Starting price; null renders as quote required. |
-| `services` | `image_path` | Nullable string | Path to optional service image on the public storage disk. |
-| `services` | `is_active` | Boolean, indexed, default true | Whether customers can see the service. |
-| `services` | `lock_version` | Unsigned integer, default 0 | Optimistic concurrency version; stale service edits are rejected. |
-| `services` | timestamps | Datetime | Created/updated times. |
-| `carts` | `id` | Integer primary key | Cart identifier. |
-| `carts` | `user_id` | Foreign key to `users.id`, unique, cascade on delete | The customer who owns this cart; at most one cart per account. |
-| `carts` | timestamps | Datetime | Cart created/updated times. |
-| `cart_items` | `id` | Integer primary key | Cart line identifier. |
-| `cart_items` | `cart_id` | Foreign key to `carts.id`, cascade on delete | Parent cart. |
-| `cart_items` | `product_id` | Nullable foreign key to `products.id`, cascade on delete | Product target when the line is a product. |
-| `cart_items` | `product_variant_id` | Nullable foreign key to `product_variants.id`, set null on delete | Selected product variant for that cart line. |
-| `cart_items` | `service_id` | Nullable foreign key to `services.id`, cascade on delete | Service target when the line is a service. |
-| `cart_items` | `quantity` | Unsigned integer, default 1 | Requested quantity; application validation limits it to 1-99. |
-| `cart_items` | `(cart_id, product_variant_id)` | Composite unique index | Prevents duplicate selections of the exact same product variant in one cart. |
-| `cart_items` | `(cart_id, service_id)` | Composite unique index | Prevents duplicate service lines in one cart. |
-| `cart_items` | timestamps | Datetime | Line created/updated times. |
-| `orders` | `id` | Integer primary key | Order identifier. |
-| `orders` | `user_id` | Foreign key to `users.id`, restrict on delete | Customer who placed the order. |
-| `orders` | `status` | String, indexed, default `pending` | Workflow state: `pending`, `quote_requested`, `quote_sent`, `processing`, `completed`, `cancelled`. |
-| `orders` | `subtotal` | Decimal(10,2), default 0 | Sum of priced line snapshots before any quote-only service is priced. |
-| `orders` | `quoted_total` | Nullable Decimal(10,2) | Admin-provided total required when status becomes `quote_sent`. |
-| `orders` | `customer_accepted_at` | Nullable timestamp | Time the customer accepted the quoted total. |
+| `users` | `id` | INTEGER, PK, auto-generated | Account identifier. |
+| `users` | `name` | VARCHAR(255), NOT NULL | Display name. |
+| `users` | `email` | VARCHAR(255), NOT NULL, UNIQUE | Login identifier. |
+| `users` | `password` | VARCHAR(255), NOT NULL | Credential hash; hashed by model cast. |
+| `users` | `role` | VARCHAR(255), indexed, NOT NULL, default `customer` | Authorization role: `customer`, `employee`, or `admin`; application validation restricts values and public signup cannot assign it. |
+| `users` | `phone` | VARCHAR(25), NULL | Optional contact number. |
+| `users` | `is_active` | BOOLEAN, NOT NULL, DEFAULT true, indexed | Inactive accounts cannot sign in or access protected account/store routes. |
+| `users` | `email_verified_at` | TIMESTAMP, NULL | Email verification time. |
+| `users` | `remember_token` | VARCHAR(100), NULL | Framework remember-me token. |
+| `users` | `created_at`, `updated_at` | DATETIME, NULL | Framework account creation/update times. |
+| `products` | `id` | INTEGER, PK, auto-generated | Catalog identifier. |
+| `products` | `name` | VARCHAR(255), NOT NULL | Product title. |
+| `products` | `description` | TEXT, NULL | Product details. |
+| `products` | `category` | VARCHAR(255), NOT NULL, default `paper`, indexed | Finished-item category such as `paper`, `mug`, `shirt`, `tarpaulin`, or `other`; application validation restricts values. |
+| `products` | `price` | DECIMAL(10,2), NOT NULL, default 0 | Base/default price mirror for the standard variant; product/default-variant update flows keep the values synchronized. |
+| `products` | `paper_size`, `paper_weight`, `paper_finish` | VARCHAR(80) each, NULL | Optional paper specifications for legacy paper-based products; cleared for non-paper category. |
+| `products` | `image_path` | VARCHAR(255), NULL | Path to optional catalog image on the public storage disk. |
+| `products` | `is_active` | BOOLEAN, NOT NULL, DEFAULT true, indexed | Whether customers can see the product. |
+| `products` | `lock_version` | INTEGER, NOT NULL, DEFAULT 0, unsigned in migration | Optimistic concurrency version for catalog edits. |
+| `products` | `created_at`, `updated_at` | DATETIME, NULL | Record creation/update times. |
+| `product_variants` | `id` | INTEGER, PK, auto-generated | Product option/variant identifier. |
+| `product_variants` | `product_id` | NOT NULL INTEGER; FK to `products.id`, ON DELETE CASCADE | Parent product. |
+| `product_variants` | `name` | VARCHAR(255), NOT NULL | Required customer-visible variant name such as `Large / Black`. |
+| `product_variants` | `sku` | VARCHAR(255), nullable, UNIQUE | Optional stock code; unique when supplied. |
+| `product_variants` | `options` | JSON, nullable | Customer-visible option values such as size, color, or dimensions; application accepts at most 8 string values, each at most 80 characters. |
+| `product_variants` | `price` | DECIMAL(10,2), NOT NULL | Variant-specific price charged when this option is selected. |
+| `product_variants` | `is_default` | BOOLEAN, NOT NULL, default false | Marks the default variant; application workflows create and maintain a default variant. |
+| `product_variants` | `is_active` | BOOLEAN, NOT NULL, default true, indexed | Inactive variants are hidden from customers. |
+| `product_variants` | `lock_version` | INTEGER, NOT NULL, DEFAULT 0, unsigned in migration | Optimistic concurrency version for variant edits. |
+| `product_variants` | `created_at`, `updated_at` | DATETIME, NULL | Created/updated times. |
+| `product_variant_supplies` | `product_variant_id` | INTEGER; FK to `product_variants.id`, ON DELETE CASCADE | First column of the composite primary key. |
+| `product_variant_supplies` | `inventory_item_id` | INTEGER; FK to `inventory_items.id`, ON DELETE RESTRICT | Second column of the composite primary key. |
+| `product_variant_supplies` | `quantity_per_unit` | NOT NULL DECIMAL(12,3) | Raw material quantity needed for one finished unit; application requires a positive quantity. |
+| `services` | `id` | INTEGER, PK, auto-generated | Service identifier. |
+| `services` | `name` | VARCHAR(255), NOT NULL | Service title. |
+| `services` | `description` | TEXT, NULL | Service details. |
+| `services` | `starting_price` | DECIMAL(10,2), NULL | Starting price; null renders as quote required. |
+| `services` | `image_path` | VARCHAR(255), NULL | Path to optional service image on the public storage disk. |
+| `services` | `is_active` | BOOLEAN, NOT NULL, DEFAULT true, indexed | Whether customers can see the service. |
+| `services` | `lock_version` | INTEGER, NOT NULL, DEFAULT 0, unsigned in migration | Optimistic concurrency version; stale service edits are rejected. |
+| `services` | `created_at`, `updated_at` | DATETIME, NULL | Record creation/update times. |
+| `carts` | `id` | INTEGER, PK, auto-generated | Cart identifier. |
+| `carts` | `user_id` | NOT NULL INTEGER; UNIQUE; FK to `users.id`, ON DELETE CASCADE | The customer who owns this cart; at most one cart per account. |
+| `carts` | `created_at`, `updated_at` | DATETIME, NULL | Cart creation/update times. |
+| `cart_items` | `id` | INTEGER, PK, auto-generated | Cart line identifier. |
+| `cart_items` | `cart_id` | NOT NULL INTEGER; FK to `carts.id`, ON DELETE CASCADE | Parent cart. |
+| `cart_items` | `product_id` | Nullable FK to `products.id`, ON DELETE CASCADE | Product target when the line is a product. |
+| `cart_items` | `product_variant_id` | Nullable FK to `product_variants.id`, ON DELETE SET NULL | Selected product variant for that cart line. |
+| `cart_items` | `service_id` | Nullable FK to `services.id`, ON DELETE CASCADE | Service target when the line is a service. |
+| `cart_items` | `quantity` | INTEGER, NOT NULL, unsigned, DEFAULT 1 | Requested quantity; application validation limits it to 1-99. |
+| `cart_items` | `(cart_id, product_variant_id)` | UNIQUE composite index | Prevents duplicate selections of the exact same product variant in one cart. |
+| `cart_items` | `(cart_id, service_id)` | UNIQUE composite index | Prevents duplicate service lines in one cart. |
+| `cart_items` | `created_at`, `updated_at` | DATETIME, NULL | Line creation/update times. |
+| `orders` | `id` | INTEGER, PK, auto-generated | Order identifier. |
+| `orders` | `user_id` | NOT NULL INTEGER; FK to `users.id`, ON DELETE RESTRICT | Customer who placed the order. |
+| `orders` | `status` | VARCHAR(255), NOT NULL, indexed, DEFAULT `pending` | Workflow value: `pending`, `quote_requested`, `quote_sent`, `processing`, `completed`, or `cancelled`; application validates transitions. |
+| `orders` | `subtotal` | DECIMAL(10,2), NOT NULL, DEFAULT 0 | Sum of priced line snapshots at submission; quote-only lines are excluded. |
+| `orders` | `quoted_total` | DECIMAL(10,2), NULL | Admin-provided total; required by application when status becomes `quote_sent`. |
+| `orders` | `customer_accepted_at` | TIMESTAMP, NULL | Time the customer accepted the quoted total. |
 | `orders` | `artwork_path` | Nullable string | Path to customer artwork on private local storage; download uses authorization-scoped routes. |
-| `orders` | `customer_note`, `admin_note` | Nullable text | Customer instructions and customer-visible staff update. |
-| `orders` | timestamps | Datetime | Order created/updated times. |
-| `order_items` | `id` | Integer primary key | Order-line identifier. |
-| `order_items` | `order_id` | Foreign key to `orders.id`, cascade on delete | Parent order. |
-| `order_items` | `product_id`, `product_variant_id`, `service_id` | Nullable foreign keys, set null on delete | Optional source catalog records; snapshots remain if source is deleted. Exactly one source is enforced in application flow, not by a database check. |
-| `order_items` | `item_name`, `item_description` | String, nullable text | Purchase-time display snapshots. |
-| `order_items` | `unit_price` | Nullable Decimal(10,2) | Purchase-time unit price; null denotes an item requiring a quote. |
-| `order_items` | `quantity` | Unsigned integer | Quantity submitted from cart. |
-| `order_items` | `variant_name` | Nullable string | Selected product variant name, such as `Large / Black`. |
-| `order_items` | `variant_options` | Nullable JSON | Selected option details captured at the time of order submission. |
-| `order_items` | `paper_size`, `paper_weight`, `paper_finish` | Nullable strings (80) | Product paper-option snapshots. |
-| `order_items` | timestamps | Datetime | Order-line created/updated times. |
-| `suppliers` | `id` | Integer primary key | Supplier identifier. |
-| `suppliers` | `name` | String, required | Supplier name. |
-| `suppliers` | `email`, `phone`, `address` | Nullable strings | Supplier contact details. |
-| `suppliers` | `is_active` | Boolean, indexed, default true | Whether staff can select the supplier for new receipts; historical movements remain. |
-| `suppliers` | timestamps | Datetime | Supplier timestamps. |
-| `inventory_items` | `id` | Integer primary key | Raw-supply identifier. |
-| `inventory_items` | `name`, `sku` | Required string name; nullable unique SKU | Supply name and optional stock code; separate rows can represent sizes/colors. |
-| `inventory_items` | `category` | Indexed string | `paper`, `blank_mug`, `blank_shirt`, `tarpaulin_material`, `ink`, or `other`. |
-| `inventory_items` | `unit` | String(32) | Counting unit, for example sheet, piece, meter, roll, or bottle. |
-| `inventory_items` | `quantity_on_hand` | Decimal(12,3), default 0 | Current supply balance; changed through movement recording. |
-| `inventory_items` | `reorder_level` | Decimal(12,3), default 0 | Active supplies at/below this level are low stock. |
-| `inventory_items` | `is_active` | Boolean, indexed, default true | Inactive supply record is retained but excluded from active operations. |
-| `inventory_items` | `lock_version` | Unsigned integer, default 0 | Optimistic locking for metadata edits. |
-| `inventory_item_supplier` | `inventory_item_id`, `supplier_id` | Composite primary key, cascading foreign keys | Many-to-many supplier association for a supply. |
-| `inventory_movements` | `id` | Integer primary key | Stock movement identifier. |
-| `inventory_movements` | `inventory_item_id` | Foreign key, restrict on delete | Supply whose balance changed. |
-| `inventory_movements` | `supplier_id` | Nullable foreign key, set null on delete | Supplier associated with a receipt. |
-| `inventory_movements` | `user_id` | Foreign key to `users.id`, restrict on delete | Staff member who recorded the movement. |
-| `inventory_movements` | `order_id` | Nullable foreign key to `orders.id`, set null on delete | Order whose production start triggered a material usage deduction. |
-| `inventory_movements` | `type` | String | `received`, `used`, or `stocktake`. |
-| `inventory_movements` | `quantity_change` | Signed Decimal(12,3) | Balance delta; stocktake is counted balance minus prior balance. |
-| `inventory_movements` | `quantity_before`, `quantity_after` | Decimal(12,3) | Balance before/after movement for audit. |
+| `orders` | `inventory_consumed_at` | Nullable TIMESTAMP | Idempotency marker set after the order's raw-supply recipe has been consumed. |
+| `orders` | `customer_note`, `admin_note` | TEXT, NULL | Customer instructions and customer-visible staff update. |
+| `orders` | `created_at`, `updated_at` | DATETIME, NULL | Order creation/update times. |
+| `order_items` | `id` | INTEGER, PK, auto-generated | Order-line identifier. |
+| `order_items` | `order_id` | NOT NULL INTEGER; FK to `orders.id`, ON DELETE CASCADE | Parent order. |
+| `order_items` | `product_id` | Nullable FK to `products.id`, ON DELETE SET NULL | Optional source product; purchase snapshot remains if the product is deleted. |
+| `order_items` | `product_variant_id` | Nullable FK to `product_variants.id`, ON DELETE SET NULL | Optional source variant; purchase snapshot remains if the variant is deleted. |
+| `order_items` | `service_id` | Nullable FK to `services.id`, ON DELETE SET NULL | Optional source service; purchase snapshot remains if the service is deleted. |
+| `order_items` | source XOR rule | Application constraint | Exactly one of product or service is required; product lines also carry their selected variant when available. No database check currently enforces this rule. |
+| `order_items` | `item_name` | VARCHAR(255), NOT NULL | Purchase-time item-name snapshot. |
+| `order_items` | `item_description` | TEXT, NULL | Purchase-time description snapshot. |
+| `order_items` | `unit_price` | DECIMAL(10,2), NULL | Purchase-time unit price; null denotes an item requiring a quote. |
+| `order_items` | `quantity` | INTEGER, NOT NULL, unsigned in migration | Quantity submitted from cart. |
+| `order_items` | `variant_name` | Nullable VARCHAR(255) | Selected product variant name, such as `Large / Black`; purchase-time snapshot. |
+| `order_items` | `variant_options` | Nullable JSON | Selected option details captured at order submission; deliberate purchase-time snapshot. |
+| `order_items` | `paper_size`, `paper_weight`, `paper_finish` | VARCHAR(80) each, NULL | Product paper-option snapshots. |
+| `order_items` | `created_at`, `updated_at` | DATETIME, NULL | Order-line created/updated times. |
+| `suppliers` | `id` | INTEGER, PK, auto-generated | Supplier identifier. |
+| `suppliers` | `name` | VARCHAR(255), NOT NULL | Supplier name. |
+| `suppliers` | `email`, `address` | VARCHAR(255), NULL | Supplier email and address. |
+| `suppliers` | `phone` | VARCHAR(25), NULL | Supplier contact phone. |
+| `suppliers` | `is_active` | BOOLEAN, NOT NULL, DEFAULT true, indexed | Whether staff can select the supplier for new receipts; historical movements remain. |
+| `suppliers` | `created_at`, `updated_at` | DATETIME, NULL | Supplier timestamps. |
+| `inventory_items` | `id` | INTEGER, PK, auto-generated | Raw-supply identifier. |
+| `inventory_items` | `name` | VARCHAR(255), NOT NULL | Supply name; separate rows can represent sizes/colors. |
+| `inventory_items` | `sku` | VARCHAR(255), NULL, UNIQUE | Optional stock code. |
+| `inventory_items` | `category` | NOT NULL VARCHAR(255), indexed | Application-validated values: `paper`, `blank_mug`, `blank_shirt`, `tarpaulin_material`, `ink`, or `other`. |
+| `inventory_items` | `unit` | VARCHAR(32), NOT NULL | Counting unit, for example sheet, piece, meter, roll, or bottle. |
+| `inventory_items` | `quantity_on_hand` | DECIMAL(12,3), NOT NULL, DEFAULT 0 | Current supply balance; changed through movement recording; application invariant is non-negative. |
+| `inventory_items` | `reorder_level` | DECIMAL(12,3), NOT NULL, DEFAULT 0 | Active supplies at/below this level are low stock. |
+| `inventory_items` | `is_active` | BOOLEAN, NOT NULL, DEFAULT true, indexed | Inactive supply record is retained but excluded from active operations. |
+| `inventory_items` | `lock_version` | INTEGER, NOT NULL, DEFAULT 0, unsigned in migration | Optimistic locking for metadata edits. |
+| `inventory_items` | `created_at`, `updated_at` | DATETIME, NULL | Record creation/update times. |
+| `inventory_item_supplier` | `inventory_item_id` | INTEGER; FK to `inventory_items.id`, ON DELETE CASCADE | First column of the composite primary key. |
+| `inventory_item_supplier` | `supplier_id` | INTEGER; FK to `suppliers.id`, ON DELETE CASCADE | Second column of the composite primary key; together the columns uniquely associate one supplier with one supply. |
+| `inventory_movements` | `id` | INTEGER, PK, auto-generated | Stock movement identifier. |
+| `inventory_movements` | `inventory_item_id` | NOT NULL INTEGER; FK to `inventory_items.id`, ON DELETE RESTRICT | Supply whose balance changed. |
+| `inventory_movements` | `supplier_id` | Nullable INTEGER; FK to `suppliers.id`, ON DELETE SET NULL | Supplier associated with a receipt. |
+| `inventory_movements` | `user_id` | NOT NULL INTEGER; FK to `users.id`, ON DELETE RESTRICT | Staff member who recorded the movement. |
+| `inventory_movements` | `order_id` | Nullable INTEGER; FK to `orders.id`, ON DELETE SET NULL | Order whose production start triggered a material usage deduction. |
+| `inventory_movements` | `type` | VARCHAR(255), NOT NULL | Application-validated values: `received`, `used`, or `stocktake`. |
+| `inventory_movements` | `quantity_change` | NOT NULL DECIMAL(12,3), signed | Balance delta; received is positive, used is negative, and stocktake is counted balance minus prior balance. |
+| `inventory_movements` | `quantity_before`, `quantity_after` | NOT NULL DECIMAL(12,3) each | Balance before/after movement for audit; movement workflow maintains after = before + change. |
 | `inventory_movements` | `notes` | Nullable text | Receipt reference, usage reason, count notes, or production-order reference. |
-| `inventory_movements` | `created_at` | Timestamp | Movement timestamp; application exposes append-only movements. |
+| `inventory_movements` | `created_at` | NOT NULL TIMESTAMP, default current time | Movement timestamp; indexed with `inventory_item_id`; application exposes append-only movements. |
 
-**Future data design to resolve before implementing ordering:**
+`inventory_items.quantity_on_hand` has the application invariant `quantity_on_hand >= 0`: stock updates execute in a transaction, lock the inventory row, and reject a negative resulting balance. There is no database `CHECK` constraint in the current migration, so non-application writers must enforce this rule too.
 
-- Cart and cart-item ownership/quantity/target are implemented. Keep enforcing exactly one catalog target per line in application code, or add a portable database check constraint if supported database engines are finalized.
+### 7.3 Normalization Review
+
+The schema was reviewed against first, second, and third normal forms (1NF-3NF):
+
+- **1NF:** Table columns hold one value per row except the JSON `product_variants.options` and `order_items.variant_options` payloads. These are deliberate, bounded option-map and purchase-snapshot exceptions; option data is not currently queried as relational data. If option-level search/reporting becomes necessary, move options to normalized definition/value tables.
+- **2NF:** Both many-to-many relationships have explicit composite-key tables. In `product_variant_supplies`, `quantity_per_unit` depends on the complete `(product_variant_id, inventory_item_id)` key. The supplier association has no non-key attributes.
+- **3NF:** Products, variants, services, users, suppliers, inventory items, orders, and movement history are separate entities. Repeated category, role, status, and movement-type values are small, application-validated vocabularies rather than copied descriptive data; lookup tables are not currently warranted.
+- **Deliberate redundancy and snapshots:** `products.price` mirrors the default variant price for legacy product forms/fallbacks and is synchronized by the product/default-variant update workflows; variant price drives selected-variant cart pricing. `orders.subtotal` is captured at order submission as the sum of priced line snapshots (quote-only lines are excluded), so later catalog edits do not change the order's submitted amount. `order_items` deliberately snapshots names, descriptions, price, paper attributes, and variant options while retaining nullable source FKs, preserving history after catalog edits/deletions.
+- **Application-enforced line integrity:** Cart/order lines require exactly one product or service in application workflows. The current portable schema does not encode this XOR as a database check; adding a supported check in the production database is a future hardening item.
+
+**Future data design decisions:**
+
+- Cart and cart-item ownership/quantity/target are implemented. The target XOR remains application-enforced; add a database check if supported database engines are finalized and independent database enforcement is required.
 - Order and order-item records/snapshots are implemented. Still decide shipping/address, estimated completion, inventory reservation, and payment fields before extending checkout.
 - Payment/transaction records should reference an order and capture amount, method, status, and provider reference; never store payment secrets.
 - Supplies are tracked separately from finished products. Product variants define their own material consumption rates; the next design decision is whether one product can have multiple active recipes or whether recipes should be locked to a single approved production method.
