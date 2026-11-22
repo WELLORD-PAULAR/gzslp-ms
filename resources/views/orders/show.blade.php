@@ -50,6 +50,8 @@
         @if ($order->artwork_path)<p class="mt-3 text-sm"><a class="font-medium underline" href="{{ route('orders.artwork', $order) }}">Download your submitted artwork</a></p>@endif
     </section>
 
+    @include('orders._payment', ['order' => $order])
+
     @if ($order->canBeCancelledByCustomer())
         <div class="mt-6 flex flex-wrap gap-3">
             @if ($order->status === \App\Models\Order::STATUS_QUOTE_SENT)

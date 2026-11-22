@@ -63,7 +63,7 @@ test('customers cannot access the admin dashboard', function () {
         ->get(route('admin.dashboard'))
         ->assertForbidden();
 
-    $this->get(route('home'))->assertOk()->assertSee('Make it yours');
+    $this->get(route('home'))->assertOk()->assertSee('Your project, your way.');
     $this->get(route('account.dashboard'))->assertOk();
 });
 

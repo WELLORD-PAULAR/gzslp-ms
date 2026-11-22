@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreManagedUserRequest;
 use App\Http\Requests\UpdateManagedUserRequest;
 use App\Models\User;
+use App\Models\VerificationCode;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -82,6 +83,12 @@ class UserController extends Controller
 
         if ($user->isDirty('email')) {
             $user->email_verified_at = null;
+            $this->expireCodes($user, VerificationCode::CHANNEL_EMAIL);
+        }
+
+        if ($user->isDirty('phone')) {
+            $user->phone_verified_at = null;
+            $this->expireCodes($user, VerificationCode::CHANNEL_SMS);
         }
 
         if (! empty($data['password'])) {
@@ -114,5 +121,14 @@ class UserController extends Controller
         $user->delete();
 
         return redirect()->route('admin.users.index')->with('status', 'Account deleted.');
+    }
+
+    private function expireCodes(User $user, string $channel): void
+    {
+        VerificationCode::query()
+            ->where('user_id', $user->id)
+            ->where('channel', $channel)
+            ->whereNull('verified_at')
+            ->update(['expires_at' => now()]);
     }
 }

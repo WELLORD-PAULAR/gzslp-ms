@@ -101,7 +101,7 @@
                 @else
                     <p class="mt-4 flex justify-between text-sm"><span>Subtotal</span><span class="font-semibold">{{ number_format($totalCents / 100, 2) }}</span></p>
                 @endif
-                <p class="mt-5 border-t border-gray-200 pt-4 text-xs text-gray-500">Order requests are submitted without payment. Payment checkout is not available yet.</p>
+                <p class="mt-5 border-t border-gray-200 pt-4 text-xs text-gray-500">Submit your order first, then pay from the order details page using the demo gateway.</p>
                 @if (! $hasUnavailableItems)
                     <form class="mt-5 border-t border-gray-200 pt-5" method="POST" action="{{ route('orders.store') }}" enctype="multipart/form-data">
                         @csrf

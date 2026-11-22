@@ -18,7 +18,7 @@
         <div>
             <p class="text-sm font-semibold uppercase text-gray-500">Reporting</p>
             <h1 class="mt-2 text-3xl font-semibold">Order activity</h1>
-            <p class="mt-2 text-sm text-gray-600">Completed order value is not verified revenue because payment processing is not enabled.</p>
+            <p class="mt-2 text-sm text-gray-600">Completed order value is not payment-verified revenue; successful payments are tracked on each order.</p>
         </div>
         <button class="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium print:hidden" type="button" onclick="window.print()">Print report</button>
     </section>
@@ -65,7 +65,7 @@
                 <div class="flex justify-between gap-4 py-2"><dt>Active services</dt><dd class="font-medium">{{ $catalogCounts['active_services'] }}</dd></div>
                 <div class="flex justify-between gap-4 py-2"><dt>Hidden services</dt><dd class="font-medium">{{ $catalogCounts['hidden_services'] }}</dd></div>
             </dl>
-            <p class="mt-3 text-xs text-gray-500">This is catalog visibility, not stock inventory. Inventory quantities are not tracked yet.</p>
+            <p class="mt-3 text-xs text-gray-500">This is catalog visibility, not stock inventory. Stock levels are tracked in the inventory workspace.</p>
         </div>
 
         <div>

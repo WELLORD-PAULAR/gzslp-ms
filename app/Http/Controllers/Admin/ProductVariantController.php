@@ -17,7 +17,7 @@ class ProductVariantController extends Controller
 {
     public function index(Product $product): View
     {
-        $variants = $product->variants()->withCount('supplies')->orderByDesc('is_default')->orderBy('name')->get();
+        $variants = $product->variants()->withCount('supplies')->with('supplies')->orderByDesc('is_default')->orderBy('name')->get();
 
         return view('admin.products.variants.index', compact('product', 'variants'));
     }

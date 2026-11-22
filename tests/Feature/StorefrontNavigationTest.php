@@ -15,7 +15,7 @@ test('the storefront navigation links to home, services, and cart', function () 
         ->assertDontSee('>Products</a>', false)
         ->assertDontSee('>Cart ', false)
         ->assertSee(route('login'), false)
-        ->assertSee('Log in to browse services')
+        ->assertSee('Start your order')
         ->assertSee(route('register'), false);
 });
 
@@ -43,7 +43,7 @@ test('a signed-in customer can see and visit services and cart', function () {
         ->assertSee(route('products.index'), false)
         ->assertSee(route('services'), false)
         ->assertSee(route('cart'), false)
-        ->assertSee('Browse products');
+        ->assertSee('Explore products');
 
     Service::create(['name' => 'Custom artwork print']);
     Product::create(['name' => 'A4 matte print', 'price' => 12.50]);

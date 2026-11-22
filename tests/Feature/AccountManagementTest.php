@@ -3,11 +3,10 @@
 use App\Models\Order;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Notifications\VerifyEmailOtp;
 use Illuminate\Auth\Notifications\ResetPassword;
-use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Facades\URL;
 
 uses(RefreshDatabase::class);
 
@@ -221,7 +220,7 @@ test('inactive accounts cannot sign in', function () {
     $this->assertGuest();
 });
 
-test('registration sends an email verification notification and the signed link verifies the account', function () {
+test('registration sends an email verification code that verifies the account', function () {
     Notification::fake();
 
     $this->post(route('register.store'), [
@@ -232,15 +231,20 @@ test('registration sends an email verification notification and the signed link 
     ])->assertRedirect(route('account.dashboard'));
 
     $user = User::where('email', 'verify@example.com')->firstOrFail();
-    Notification::assertSentTo($user, VerifyEmail::class);
 
-    $verificationUrl = URL::temporarySignedRoute(
-        'verification.verify',
-        now()->addMinutes(30),
-        ['id' => $user->id, 'hash' => sha1($user->getEmailForVerification())],
-    );
+    $code = null;
+    Notification::assertSentTo($user, VerifyEmailOtp::class, function (VerifyEmailOtp $notification) use (&$code): bool {
+        $code = $notification->code;
 
-    $this->get($verificationUrl)->assertRedirect(route('account.dashboard'));
+        return true;
+    });
+
+    expect($code)->toHaveLength(6)
+        ->and($user->hasVerifiedEmail())->toBeFalse();
+
+    $this->post(route('verification.verify', 'email'), ['code' => $code])
+        ->assertRedirect(route('account.dashboard'));
+
     expect($user->fresh()->hasVerifiedEmail())->toBeTrue();
 });
 

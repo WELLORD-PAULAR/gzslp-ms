@@ -44,6 +44,15 @@
         @if ($order->artwork_path)<p class="mt-3 text-sm"><a class="font-medium underline" href="{{ route('admin.orders.artwork', $order) }}">Download customer artwork</a></p>@endif
     </section>
 
+    @if ($order->hasFinalTotal())
+        <section class="mt-6 ml-auto max-w-md border-y border-gray-200 py-4">
+            <p class="flex justify-between text-sm"><span>Paid</span><span class="font-semibold">{{ number_format($order->paidAmountCents() / 100, 2) }}</span></p>
+            <p class="mt-2 flex justify-between text-sm"><span>Balance due</span><span class="font-semibold">{{ number_format($order->amountDueCents() / 100, 2) }}</span></p>
+        </section>
+    @endif
+
+    @include('payments._history', ['order' => $order])
+
     @if ($allowedStatuses)
         <form class="mt-8 max-w-xl space-y-4 border-y border-gray-200 py-6" method="POST" action="{{ route('admin.orders.update', $order) }}">
             @csrf
