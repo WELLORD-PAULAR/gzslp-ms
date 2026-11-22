@@ -4,178 +4,149 @@ erDiagram
     USERS ||--o{ INVENTORY_MOVEMENTS : records
 
     CARTS ||--o{ CART_ITEMS : contains
-    PRODUCTS o|--o{ CART_ITEMS : selected_product
-    PRODUCT_VARIANTS o|--o{ CART_ITEMS : selected_variant
-    SERVICES o|--o{ CART_ITEMS : selected_service
 
     PRODUCTS ||--o{ PRODUCT_VARIANTS : has
-    ORDERS ||--o{ ORDER_ITEMS : contains
-    PRODUCTS o|--o{ ORDER_ITEMS : source_product
-    PRODUCT_VARIANTS o|--o{ ORDER_ITEMS : source_variant
-    SERVICES o|--o{ ORDER_ITEMS : source_service
+    PRODUCTS o|--o{ CART_ITEMS : referenced_by
+    PRODUCTS o|--o{ ORDER_ITEMS : source
 
-    INVENTORY_ITEMS ||--o{ INVENTORY_ITEM_SUPPLIER : supply_links
-    SUPPLIERS ||--o{ INVENTORY_ITEM_SUPPLIER : supplier_links
-    INVENTORY_ITEMS ||--o{ INVENTORY_MOVEMENTS : has_history
-    SUPPLIERS o|--o{ INVENTORY_MOVEMENTS : receipt_source
-    ORDERS o|--o{ INVENTORY_MOVEMENTS : production_usage
-    PRODUCT_VARIANTS ||--o{ PRODUCT_VARIANT_SUPPLIES : recipe_lines
-    INVENTORY_ITEMS ||--o{ PRODUCT_VARIANT_SUPPLIES : recipe_material
+    PRODUCT_VARIANTS ||--o{ CART_ITEMS : selected_variant
+    PRODUCT_VARIANTS ||--o{ ORDER_ITEMS : variant_snapshot
+    PRODUCT_VARIANTS }o--o{ INVENTORY_ITEMS : consumes_via_recipe
+
+    SERVICES ||--o{ CART_ITEMS : referenced_by
+    SERVICES ||--o{ ORDER_ITEMS : referenced_by
+
+    ORDERS ||--|{ ORDER_ITEMS : snapshots
+    ORDERS ||--o{ INVENTORY_MOVEMENTS : uses_material_for
+    INVENTORY_ITEMS }o--o{ SUPPLIERS : sourced_from
+    INVENTORY_ITEMS ||--o{ INVENTORY_MOVEMENTS : records
+    PRODUCT_VARIANTS ||--o{ PRODUCT_VARIANT_SUPPLIES : recipe
+    INVENTORY_ITEMS ||--o{ PRODUCT_VARIANT_SUPPLIES : used_in_recipe
 
     USERS {
-        INTEGER id PK
-        VARCHAR(255) name
-        VARCHAR(255) email UK
-        TIMESTAMP email_verified_at
-        VARCHAR(255) password
-        VARCHAR(100) remember_token
-        VARCHAR(255) role
-        VARCHAR(25) phone
-        BOOLEAN is_active
-        DATETIME created_at
-        DATETIME updated_at
-    }
-
-    PRODUCTS {
-        INTEGER id PK
-        VARCHAR(255) name
-        TEXT description
-        VARCHAR(255) category
-        DECIMAL(10,2) price
-        VARCHAR(80) paper_size
-        VARCHAR(80) paper_weight
-        VARCHAR(80) paper_finish
-        VARCHAR(255) image_path
-        BOOLEAN is_active
-        INTEGER lock_version
-        DATETIME created_at
-        DATETIME updated_at
-    }
-
-    PRODUCT_VARIANTS {
-        INTEGER id PK
-        INTEGER product_id FK
-        VARCHAR(255) name
-        VARCHAR(255) sku UK
-        JSON options
-        DECIMAL(10,2) price
-        BOOLEAN is_default
-        BOOLEAN is_active
-        INTEGER lock_version
-        DATETIME created_at
-        DATETIME updated_at
-    }
-
-    SERVICES {
-        INTEGER id PK
-        VARCHAR(255) name
-        TEXT description
-        DECIMAL(10,2) starting_price
-        VARCHAR(255) image_path
-        BOOLEAN is_active
-        INTEGER lock_version
-        DATETIME created_at
-        DATETIME updated_at
+        bigint id PK
+        string name
+        string email
+        string role
+        boolean is_active
     }
 
     CARTS {
-        INTEGER id PK
-        INTEGER user_id FK, UK
-        DATETIME created_at
-        DATETIME updated_at
+        bigint id PK
+        bigint user_id FK
     }
 
     CART_ITEMS {
-        INTEGER id PK
-        INTEGER cart_id FK
-        INTEGER product_id FK
-        INTEGER product_variant_id FK
-        INTEGER service_id FK
-        INTEGER quantity
-        DATETIME created_at
-        DATETIME updated_at
+        bigint id PK
+        bigint cart_id FK
+        bigint product_id FK
+        bigint product_variant_id FK
+        bigint service_id FK
+        int quantity
+    }
+
+    PRODUCTS {
+        bigint id PK
+        string name
+        string description
+        string category
+        decimal price
+        string paper_size
+        string paper_weight
+        string paper_finish
+        string image_path
+        boolean is_active
+        int lock_version
+    }
+
+    PRODUCT_VARIANTS {
+        bigint id PK
+        bigint product_id FK
+        string name
+        string sku
+        json options
+        decimal price
+        boolean is_default
+        boolean is_active
+        int lock_version
+    }
+
+    SERVICES {
+        bigint id PK
+        string name
+        string description
+        decimal starting_price
+        string image_path
+        boolean is_active
+        int lock_version
     }
 
     ORDERS {
-        INTEGER id PK
-        INTEGER user_id FK
-        VARCHAR(255) status
-        DECIMAL(10,2) subtotal
-        DECIMAL(10,2) quoted_total
-        TIMESTAMP customer_accepted_at
-        VARCHAR(255) artwork_path
-        TEXT customer_note
-        TEXT admin_note
-        TIMESTAMP inventory_consumed_at
-        DATETIME created_at
-        DATETIME updated_at
+        bigint id PK
+        bigint user_id FK
+        string status
+        decimal subtotal
+        decimal quoted_total
+        timestamp customer_accepted_at
+        string artwork_path
+        text customer_note
+        text admin_note
+        timestamp inventory_consumed_at
     }
 
     ORDER_ITEMS {
-        INTEGER id PK
-        INTEGER order_id FK
-        INTEGER product_id FK
-        INTEGER product_variant_id FK
-        INTEGER service_id FK
-        VARCHAR(255) item_name
-        TEXT item_description
-        DECIMAL(10,2) unit_price
-        INTEGER quantity
-        VARCHAR(255) variant_name
-        JSON variant_options
-        VARCHAR(80) paper_size
-        VARCHAR(80) paper_weight
-        VARCHAR(80) paper_finish
-        DATETIME created_at
-        DATETIME updated_at
+        bigint id PK
+        bigint order_id FK
+        bigint product_id FK
+        bigint product_variant_id FK
+        bigint service_id FK
+        string item_name
+        text item_description
+        decimal unit_price
+        int quantity
+        string variant_name
+        json variant_options
+        string paper_size
+        string paper_weight
+        string paper_finish
     }
 
     SUPPLIERS {
-        INTEGER id PK
-        VARCHAR(255) name
-        VARCHAR(255) email
-        VARCHAR(25) phone
-        VARCHAR(255) address
-        BOOLEAN is_active
-        DATETIME created_at
-        DATETIME updated_at
+        bigint id PK
+        string name
+        string email
+        string phone
+        string address
+        boolean is_active
     }
 
     INVENTORY_ITEMS {
-        INTEGER id PK
-        VARCHAR(255) name
-        VARCHAR(255) sku UK
-        VARCHAR(255) category
-        VARCHAR(32) unit
-        DECIMAL(12,3) quantity_on_hand
-        DECIMAL(12,3) reorder_level
-        BOOLEAN is_active
-        INTEGER lock_version
-        DATETIME created_at
-        DATETIME updated_at
-    }
-
-    INVENTORY_ITEM_SUPPLIER {
-        INTEGER inventory_item_id PK, FK
-        INTEGER supplier_id PK, FK
+        bigint id PK
+        string name
+        string sku
+        string category
+        string unit
+        decimal quantity_on_hand
+        decimal reorder_level
+        boolean is_active
+        int lock_version
     }
 
     INVENTORY_MOVEMENTS {
-        INTEGER id PK
-        INTEGER inventory_item_id FK
-        INTEGER supplier_id FK
-        INTEGER user_id FK
-        INTEGER order_id FK
-        VARCHAR(255) type
-        DECIMAL(12,3) quantity_change
-        DECIMAL(12,3) quantity_before
-        DECIMAL(12,3) quantity_after
-        TEXT notes
-        TIMESTAMP created_at
+        bigint id PK
+        bigint inventory_item_id FK
+        bigint supplier_id FK
+        bigint user_id FK
+        bigint order_id FK
+        string type
+        decimal quantity_change
+        decimal quantity_before
+        decimal quantity_after
+        text notes
     }
 
     PRODUCT_VARIANT_SUPPLIES {
-        INTEGER product_variant_id PK, FK
-        INTEGER inventory_item_id PK, FK
-        DECIMAL(12,3) quantity_per_unit
+        bigint product_variant_id FK
+        bigint inventory_item_id FK
+        decimal quantity_per_unit
     }

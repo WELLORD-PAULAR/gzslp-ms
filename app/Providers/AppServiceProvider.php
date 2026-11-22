@@ -24,6 +24,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('access-active-account', fn (User $user): bool => $user->isActive());
         Gate::define('access-admin', fn (User $user): bool => $user->isActive() && $user->isAdmin());
         Gate::define('manage-shop', fn (User $user): bool => $user->isActive() && $user->isStaff());
-        Gate::define('access-customer', fn (User $user): bool => $user->isActive() && $user->role === User::ROLE_CUSTOMER);
+        Gate::define('access-customer', fn (User $user): bool => $user->isActive()
+            && ($user->role === User::ROLE_CUSTOMER || $user->isPreviewingStorefront()));
     }
 }

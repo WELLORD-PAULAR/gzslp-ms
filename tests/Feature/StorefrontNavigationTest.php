@@ -52,3 +52,38 @@ test('a signed-in customer can see and visit services and cart', function () {
     $this->get(route('services'))->assertOk()->assertSee('Custom artwork print');
     $this->get(route('cart'))->assertOk()->assertSee('Your cart is empty.');
 });
+
+test('a staff member can preview the customer storefront and exit back to the workspace', function () {
+    $employee = User::factory()->create();
+    $employee->forceFill(['role' => User::ROLE_EMPLOYEE])->save();
+
+    $this->actingAs($employee)
+        ->get(route('home'))
+        ->assertRedirect(route('admin.dashboard'));
+
+    $this->get(route('admin.storefront.preview'))
+        ->assertRedirect(route('home'));
+
+    $this->get(route('home'))
+        ->assertOk()
+        ->assertSee(route('products.index'), false)
+        ->assertSee(route('services'), false)
+        ->assertSee(route('cart'), false)
+        ->assertSee('Back to workspace')
+        ->assertDontSee('>Workspace</a>', false);
+
+    $this->get(route('cart'))->assertOk();
+    $this->get(route('services'))->assertOk();
+
+    $this->get(route('admin.storefront.exit'))
+        ->assertRedirect(route('admin.dashboard'));
+
+    $this->get(route('home'))->assertRedirect(route('admin.dashboard'));
+    $this->get(route('cart'))->assertForbidden();
+});
+
+test('customers cannot enter the staff storefront preview', function () {
+    $this->actingAs(User::factory()->create())
+        ->get(route('admin.storefront.preview'))
+        ->assertForbidden();
+});

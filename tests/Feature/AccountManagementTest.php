@@ -57,6 +57,59 @@ test('a customer cannot change their password without the current password', fun
     expect($customer->fresh()->password)->toBe($oldPasswordHash);
 });
 
+test('an employee can update their own details and change password from the workspace', function () {
+    $employee = User::factory()->create([
+        'email' => 'employee-old@example.com',
+        'email_verified_at' => now(),
+    ]);
+    $employee->forceFill(['role' => User::ROLE_EMPLOYEE])->save();
+
+    $this->actingAs($employee)
+        ->get(route('admin.account.dashboard'))
+        ->assertOk()
+        ->assertSee('employee-old@example.com');
+
+    $this->get(route('admin.account.edit'))
+        ->assertOk()
+        ->assertSee(route('admin.account.update'));
+
+    $this->patch(route('admin.account.update'), [
+        'name' => 'Updated Employee',
+        'email' => 'employee-new@example.com',
+        'phone' => '+63 917 000 0000',
+    ])->assertRedirect(route('admin.account.dashboard'));
+
+    expect($employee->fresh()->name)->toBe('Updated Employee')
+        ->and($employee->fresh()->email)->toBe('employee-new@example.com')
+        ->and($employee->fresh()->phone)->toBe('+63 917 000 0000')
+        ->and($employee->fresh()->email_verified_at)->toBeNull();
+
+    $this->patch(route('admin.account.password.update'), [
+        'current_password' => 'password',
+        'password' => 'employee-password-123',
+        'password_confirmation' => 'employee-password-123',
+    ])->assertRedirect(route('admin.account.dashboard'));
+
+    expect(Hash::check('employee-password-123', $employee->fresh()->password))->toBeTrue();
+});
+
+test('an employee cannot change their role or active state through account updates', function () {
+    $employee = User::factory()->create();
+    $employee->forceFill(['role' => User::ROLE_EMPLOYEE])->save();
+
+    $this->actingAs($employee)
+        ->patch(route('admin.account.update'), [
+            'name' => $employee->name,
+            'email' => $employee->email,
+            'phone' => $employee->phone,
+            'role' => User::ROLE_ADMIN,
+            'is_active' => false,
+        ])->assertRedirect(route('admin.account.dashboard'));
+
+    expect($employee->fresh()->isEmployee())->toBeTrue()
+        ->and($employee->fresh()->isActive())->toBeTrue();
+});
+
 test('an admin can create and filter accounts and deactivate an account without deleting its orders', function () {
     $admin = User::factory()->create();
     $admin->forceFill(['role' => User::ROLE_ADMIN])->save();

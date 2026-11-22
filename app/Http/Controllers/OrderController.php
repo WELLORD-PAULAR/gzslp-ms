@@ -88,6 +88,19 @@ class OrderController extends Controller
 
             $cart->items()->delete();
 
+            // A priced order is a confirmed purchase: take the supplies now, in the same
+            // transaction, so a shortage rejects the whole checkout and nothing is saved.
+            // Quote orders take their supplies when the customer accepts the quote.
+            if (! $requiresQuote) {
+                try {
+                    app(InventoryConsumptionService::class)->consumeForOrder($order, $request->user());
+                } catch (ValidationException $exception) {
+                    throw ValidationException::withMessages([
+                        'cart' => $exception->errors()['inventory'] ?? ['Some items in your cart cannot be supplied right now.'],
+                    ]);
+                }
+            }
+
             return $order;
             });
         } catch (Throwable $exception) {
@@ -112,13 +125,24 @@ class OrderController extends Controller
     {
         $order = $request->user()->orders()->findOrFail($order->id);
 
-        if (! $order->canBeCancelledByCustomer()) {
+        $cancelled = DB::transaction(function () use ($request, $order): bool {
+            $lockedOrder = Order::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+
+            if (! $lockedOrder->canBeCancelledByCustomer()) {
+                return false;
+            }
+
+            app(InventoryConsumptionService::class)->restoreForOrder($lockedOrder, $request->user());
+            $lockedOrder->update(['status' => Order::STATUS_CANCELLED]);
+
+            return true;
+        });
+
+        if (! $cancelled) {
             return redirect()->route('orders.show', $order)->withErrors([
                 'order' => 'This order can no longer be cancelled online. Contact the shop if you need help.',
             ]);
         }
-
-        $order->update(['status' => Order::STATUS_CANCELLED]);
 
         return redirect()->route('orders.show', $order)->with('status', 'Your order was cancelled.');
     }

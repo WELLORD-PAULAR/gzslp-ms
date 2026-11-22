@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Your orders | Print Studio')
+@section('title', 'Your orders | Graphic Zone')
 
 @section('content')
     <section>

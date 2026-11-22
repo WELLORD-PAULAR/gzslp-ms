@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Reset password | Print Studio')
+@section('title', 'Reset password | Graphic Zone')
 
 @section('content')
     <section class="mx-auto max-w-md">

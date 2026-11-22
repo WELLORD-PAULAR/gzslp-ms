@@ -34,16 +34,16 @@ class InventoryConsumptionService
                 ]);
             }
 
+            // A variant with no recipe is not stock-tracked (the cart and product page
+            // already treat it as "Stock not tracked"), so there is nothing to deduct.
             if ($variant->supplies->isEmpty()) {
-                throw ValidationException::withMessages([
-                    'inventory' => 'Add a raw-supply recipe to '.$orderItem->item_name.' before starting this order.',
-                ]);
+                continue;
             }
 
             foreach ($variant->supplies as $supply) {
                 if (! $supply->is_active) {
                     throw ValidationException::withMessages([
-                        'inventory' => $supply->name.' is inactive and cannot be used for production.',
+                        'inventory' => $supply->name.' is inactive and cannot be used for this order.',
                     ]);
                 }
 
@@ -80,7 +80,7 @@ class InventoryConsumptionService
                 $needed = number_format($requirement['quantity_milli'] / 1000, 3);
 
                 throw ValidationException::withMessages([
-                    'inventory' => $supplyName.' has '.$available.' available; '.$needed.' is needed to start this order.',
+                    'inventory' => $supplyName.' has '.$available.' available; '.$needed.' is needed for this order.',
                 ]);
             }
         }
@@ -100,12 +100,76 @@ class InventoryConsumptionService
                 'quantity_change' => number_format(-$requirement['quantity_milli'] / 1000, 3, '.', ''),
                 'quantity_before' => number_format($beforeMilli / 1000, 3, '.', ''),
                 'quantity_after' => number_format($afterMilli / 1000, 3, '.', ''),
-                'notes' => 'Production started for order #'.$order->id.' ('.implode(', ', array_unique($requirement['variant_names'])).')',
+                'notes' => 'Supplies used for order #'.$order->id.' ('.implode(', ', array_unique($requirement['variant_names'])).')',
                 'created_at' => now(),
             ]);
         }
 
         $order->inventory_consumed_at = now();
+        $order->save();
+    }
+
+    /**
+     * Put back the supplies deducted for an order that is being cancelled.
+     *
+     * The original "used" movements are the source of truth, so later recipe edits
+     * cannot change how much is returned. Safe to call more than once: it does
+     * nothing unless the order currently holds a deduction.
+     */
+    public function restoreForOrder(Order $order, User $actor): void
+    {
+        $order = Order::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+
+        if ($order->inventory_consumed_at === null) {
+            return;
+        }
+
+        $returnMilli = [];
+
+        $usedMovements = InventoryMovement::query()
+            ->where('order_id', $order->id)
+            ->where('type', InventoryMovement::TYPE_USED)
+            ->get();
+
+        foreach ($usedMovements as $movement) {
+            $milli = (int) round(abs((float) $movement->quantity_change) * 1000);
+            $returnMilli[$movement->inventory_item_id] = ($returnMilli[$movement->inventory_item_id] ?? 0) + $milli;
+        }
+
+        ksort($returnMilli);
+        $supplyItems = InventoryItem::query()
+            ->whereIn('id', array_keys($returnMilli))
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->get()
+            ->keyBy('id');
+
+        foreach ($returnMilli as $supplyId => $milli) {
+            $supply = $supplyItems->get($supplyId);
+
+            if (! $supply) {
+                continue;
+            }
+
+            $beforeMilli = (int) round((float) $supply->quantity_on_hand * 1000);
+            $afterMilli = $beforeMilli + $milli;
+            $supply->quantity_on_hand = number_format($afterMilli / 1000, 3, '.', '');
+            $supply->save();
+
+            InventoryMovement::create([
+                'inventory_item_id' => $supply->id,
+                'user_id' => $actor->id,
+                'order_id' => $order->id,
+                'type' => InventoryMovement::TYPE_RETURNED,
+                'quantity_change' => number_format($milli / 1000, 3, '.', ''),
+                'quantity_before' => number_format($beforeMilli / 1000, 3, '.', ''),
+                'quantity_after' => number_format($afterMilli / 1000, 3, '.', ''),
+                'notes' => 'Supplies returned because order #'.$order->id.' was cancelled',
+                'created_at' => now(),
+            ]);
+        }
+
+        $order->inventory_consumed_at = null;
         $order->save();
     }
 }

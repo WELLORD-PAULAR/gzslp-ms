@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', $service->name.' | Print Studio')
+@section('title', $service->name.' | Graphic Zone')
 
 @section('content')
     <section class="max-w-3xl">

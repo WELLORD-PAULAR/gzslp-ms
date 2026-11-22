@@ -46,6 +46,10 @@ class OrderController extends Controller
                     app(InventoryConsumptionService::class)->consumeForOrder($lockedOrder, $request->user());
                 }
 
+                if ($data['status'] === Order::STATUS_CANCELLED) {
+                    app(InventoryConsumptionService::class)->restoreForOrder($lockedOrder, $request->user());
+                }
+
                 if ($data['status'] === Order::STATUS_QUOTE_SENT) {
                     $lockedOrder->quoted_total = $data['quoted_total'];
                 }

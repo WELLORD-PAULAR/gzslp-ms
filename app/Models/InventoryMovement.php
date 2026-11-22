@@ -13,6 +13,8 @@ class InventoryMovement extends Model
 
     public const TYPE_STOCKTAKE = 'stocktake';
 
+    public const TYPE_RETURNED = 'returned';
+
     public $timestamps = false;
 
     protected $fillable = [

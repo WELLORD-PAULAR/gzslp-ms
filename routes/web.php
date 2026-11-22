@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ServiceController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\Admin\AccountController as AdminAccountController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\SupplierController;
@@ -22,7 +23,7 @@ use App\Models\Service;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    if (auth()->user()?->isStaff()) {
+    if (auth()->user()?->isStaff() && ! auth()->user()->isPreviewingStorefront()) {
         return redirect()->route('admin.dashboard');
     }
 
@@ -132,6 +133,22 @@ Route::middleware('auth')->group(function () {
         Route::get('/dashboard', function () {
             return view('admin.dashboard');
         })->name('dashboard');
+
+        Route::get('/account', [AdminAccountController::class, 'index'])->name('account.dashboard');
+        Route::get('/account/edit', [AdminAccountController::class, 'edit'])->name('account.edit');
+        Route::patch('/account', [AdminAccountController::class, 'update'])->name('account.update');
+        Route::patch('/account/password', [AdminAccountController::class, 'updatePassword'])->name('account.password.update');
+
+        Route::get('/storefront-preview', function (Illuminate\Http\Request $request) {
+            $request->session()->put('viewing_storefront', true);
+
+            return redirect()->route('home');
+        })->name('storefront.preview');
+        Route::get('/storefront-preview/exit', function (Illuminate\Http\Request $request) {
+            $request->session()->forget('viewing_storefront');
+
+            return redirect()->route('admin.dashboard');
+        })->name('storefront.exit');
 
         Route::resource('products', ProductController::class)->except('show');
         Route::get('/products/{product}/variants', [ProductVariantController::class, 'index'])->name('products.variants.index');

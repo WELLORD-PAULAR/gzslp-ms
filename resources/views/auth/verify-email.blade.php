@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Verify email | Print Studio')
+@section('title', 'Verify email | Graphic Zone')
 
 @section('content')
     <section class="mx-auto max-w-xl">

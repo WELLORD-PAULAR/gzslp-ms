@@ -78,6 +78,13 @@ class User extends Authenticatable implements MustVerifyEmail
         return (bool) $this->is_active;
     }
 
+    public function isPreviewingStorefront(): bool
+    {
+        return $this->isStaff()
+            && app()->bound('session')
+            && session()->get('viewing_storefront') === true;
+    }
+
     public function cart(): HasOne
     {
         return $this->hasOne(Cart::class);

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Order #'.$order->id.' | Print Studio')
+@section('title', 'Order #'.$order->id.' | Graphic Zone')
 
 @section('content')
     <section>

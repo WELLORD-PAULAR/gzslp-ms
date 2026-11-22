@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Choose a new password | Print Studio')
+@section('title', 'Choose a new password | Graphic Zone')
 
 @section('content')
     <section class="mx-auto max-w-md">

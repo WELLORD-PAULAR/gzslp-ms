@@ -260,63 +260,183 @@ test('custom artwork is stored privately and only the customer or staff can down
     $this->actingAs($employee)->get(route('admin.orders.artwork', $order))->assertOk();
 });
 
-test('supplies are consumed once when staff starts production, not when the cart is submitted', function () {
-    $customer = User::factory()->create();
-    $admin = User::factory()->create();
-    $admin->forceFill(['role' => User::ROLE_ADMIN])->save();
+function stockedProduct(string $onHand = '10.000', string $perUnit = '1.000'): array
+{
     $product = Product::create(['name' => 'Printed shirt', 'category' => 'shirt', 'price' => '30.00', 'is_active' => true]);
     $variant = $product->variants()->firstOrFail();
     $supply = InventoryItem::create([
         'name' => 'Blank shirt / Large',
         'category' => 'blank_shirt',
         'unit' => 'piece',
-        'quantity_on_hand' => '10.000',
+        'quantity_on_hand' => $onHand,
         'reorder_level' => '2.000',
         'is_active' => true,
     ]);
-    $variant->supplies()->attach($supply->id, ['quantity_per_unit' => '1.000']);
+    $variant->supplies()->attach($supply->id, ['quantity_per_unit' => $perUnit]);
+
+    return [$product, $variant, $supply];
+}
+
+function adminUser(): User
+{
+    $admin = User::factory()->create();
+    $admin->forceFill(['role' => User::ROLE_ADMIN])->save();
+
+    return $admin;
+}
+
+test('placing a priced order deducts the product supplies and lowers the available count', function () {
+    $customer = User::factory()->create();
+    [$product, $variant, $supply] = stockedProduct();
     $customer->cart()->create()->items()->create([
         'product_id' => $product->id,
         'product_variant_id' => $variant->id,
         'quantity' => 3,
     ]);
 
-    $this->actingAs($customer)->post(route('orders.store'))->assertRedirect(route('orders.show', 1));
-    expect($supply->fresh()->quantity_on_hand)->toBe('10.000');
+    $this->actingAs($customer)->get(route('products.show', $product))->assertSee('10 available');
+    $this->post(route('orders.store'))->assertRedirect(route('orders.show', 1));
 
     $order = Order::firstOrFail();
+    expect($order->status)->toBe(Order::STATUS_PENDING)
+        ->and($order->inventory_consumed_at)->not->toBeNull()
+        ->and($supply->fresh()->quantity_on_hand)->toBe('7.000')
+        ->and($supply->movements()->where('order_id', $order->id)->count())->toBe(1)
+        ->and($supply->movements()->where('order_id', $order->id)->first()->type)->toBe(InventoryMovement::TYPE_USED);
+
+    $this->get(route('products.show', $product))->assertSee('7 available');
+});
+
+test('starting production does not deduct supplies a second time', function () {
+    $customer = User::factory()->create();
+    $admin = adminUser();
+    [$product, $variant, $supply] = stockedProduct();
+    $customer->cart()->create()->items()->create([
+        'product_id' => $product->id,
+        'product_variant_id' => $variant->id,
+        'quantity' => 3,
+    ]);
+    $this->actingAs($customer)->post(route('orders.store'));
+    $order = Order::firstOrFail();
+
     $this->actingAs($admin)->patch(route('admin.orders.update', $order), [
         'status' => Order::STATUS_PROCESSING,
     ])->assertRedirect(route('admin.orders.show', $order));
 
-    expect($supply->fresh()->quantity_on_hand)->toBe('7.000')
-        ->and($order->fresh()->inventory_consumed_at)->not->toBeNull()
-        ->and($supply->movements()->where('order_id', $order->id)->count())->toBe(1)
-        ->and($supply->movements()->where('order_id', $order->id)->first()->type)->toBe(InventoryMovement::TYPE_USED);
+    expect($order->fresh()->status)->toBe(Order::STATUS_PROCESSING)
+        ->and($supply->fresh()->quantity_on_hand)->toBe('7.000')
+        ->and($supply->movements()->where('order_id', $order->id)->count())->toBe(1);
 });
 
-test('production cannot start if a variant recipe has insufficient supplies', function () {
+test('an order the supplies cannot cover is rejected at checkout and saves nothing', function () {
     $customer = User::factory()->create();
-    $admin = User::factory()->create();
-    $admin->forceFill(['role' => User::ROLE_ADMIN])->save();
-    $product = Product::create(['name' => 'Print poster', 'category' => 'paper', 'price' => '20.00', 'is_active' => true]);
-    $variant = $product->variants()->firstOrFail();
-    $supply = InventoryItem::create([
-        'name' => 'Poster sheet',
-        'category' => 'paper',
-        'unit' => 'sheet',
-        'quantity_on_hand' => '2.000',
-        'reorder_level' => '1.000',
-        'is_active' => true,
+    [$product, $variant, $supply] = stockedProduct('2.000');
+    $cart = $customer->cart()->create();
+    $cart->items()->create([
+        'product_id' => $product->id,
+        'product_variant_id' => $variant->id,
+        'quantity' => 3,
     ]);
-    $variant->supplies()->attach($supply->id, ['quantity_per_unit' => '1.000']);
+
+    $this->actingAs($customer)
+        ->from(route('cart'))
+        ->post(route('orders.store'))
+        ->assertSessionHasErrors('cart');
+
+    expect(Order::count())->toBe(0)
+        ->and($supply->fresh()->quantity_on_hand)->toBe('2.000')
+        ->and($supply->movements()->count())->toBe(0)
+        ->and($cart->items()->count())->toBe(1);
+});
+
+test('cancelling an order returns its supplies once', function () {
+    $customer = User::factory()->create();
+    [$product, $variant, $supply] = stockedProduct();
     $customer->cart()->create()->items()->create([
         'product_id' => $product->id,
         'product_variant_id' => $variant->id,
         'quantity' => 3,
     ]);
-    $this->actingAs($customer)->post(route('orders.store'))->assertRedirect(route('orders.show', 1));
+    $this->actingAs($customer)->post(route('orders.store'));
     $order = Order::firstOrFail();
+    expect($supply->fresh()->quantity_on_hand)->toBe('7.000');
+
+    $this->patch(route('orders.cancel', $order))->assertRedirect(route('orders.show', $order));
+
+    expect($order->fresh()->status)->toBe(Order::STATUS_CANCELLED)
+        ->and($order->fresh()->inventory_consumed_at)->toBeNull()
+        ->and($supply->fresh()->quantity_on_hand)->toBe('10.000')
+        ->and($supply->movements()->where('type', InventoryMovement::TYPE_RETURNED)->count())->toBe(1);
+
+    $this->patch(route('orders.cancel', $order))->assertSessionHasErrors('order');
+    expect($supply->fresh()->quantity_on_hand)->toBe('10.000');
+});
+
+test('an admin cancelling a processing order returns its supplies', function () {
+    $customer = User::factory()->create();
+    $admin = adminUser();
+    [$product, $variant, $supply] = stockedProduct();
+    $customer->cart()->create()->items()->create([
+        'product_id' => $product->id,
+        'product_variant_id' => $variant->id,
+        'quantity' => 3,
+    ]);
+    $this->actingAs($customer)->post(route('orders.store'));
+    $order = Order::firstOrFail();
+
+    $this->actingAs($admin)->patch(route('admin.orders.update', $order), ['status' => Order::STATUS_PROCESSING]);
+    $this->patch(route('admin.orders.update', $order), ['status' => Order::STATUS_CANCELLED])
+        ->assertRedirect(route('admin.orders.show', $order));
+
+    expect($order->fresh()->status)->toBe(Order::STATUS_CANCELLED)
+        ->and($supply->fresh()->quantity_on_hand)->toBe('10.000');
+});
+
+test('a quote order takes its supplies when the quote is accepted and returns them on cancel', function () {
+    $customer = User::factory()->create();
+    $admin = adminUser();
+    [$product, $variant, $supply] = stockedProduct();
+    $service = Service::create(['name' => 'Custom Artwork', 'starting_price' => null, 'is_active' => true]);
+    $cart = $customer->cart()->create();
+    $cart->items()->create(['product_id' => $product->id, 'product_variant_id' => $variant->id, 'quantity' => 2]);
+    $cart->items()->create(['service_id' => $service->id, 'quantity' => 1]);
+
+    $this->actingAs($customer)->post(route('orders.store'));
+    $order = Order::firstOrFail();
+
+    expect($order->status)->toBe(Order::STATUS_QUOTE_REQUESTED)
+        ->and($order->inventory_consumed_at)->toBeNull()
+        ->and($supply->fresh()->quantity_on_hand)->toBe('10.000');
+
+    $this->actingAs($admin)->patch(route('admin.orders.update', $order), [
+        'status' => Order::STATUS_QUOTE_SENT,
+        'quoted_total' => '90.00',
+    ]);
+    expect($supply->fresh()->quantity_on_hand)->toBe('10.000');
+
+    $this->actingAs($customer)->patch(route('orders.accept-quote', $order));
+    expect($order->fresh()->status)->toBe(Order::STATUS_PROCESSING)
+        ->and($supply->fresh()->quantity_on_hand)->toBe('8.000');
+
+    $this->actingAs($admin)->patch(route('admin.orders.update', $order), ['status' => Order::STATUS_CANCELLED]);
+    expect($supply->fresh()->quantity_on_hand)->toBe('10.000');
+});
+
+test('production cannot start on an older order if supplies are now short', function () {
+    $customer = User::factory()->create();
+    $admin = adminUser();
+    [$product, $variant, $supply] = stockedProduct();
+    $customer->cart()->create()->items()->create([
+        'product_id' => $product->id,
+        'product_variant_id' => $variant->id,
+        'quantity' => 3,
+    ]);
+    $this->actingAs($customer)->post(route('orders.store'));
+    $order = Order::firstOrFail();
+
+    // Simulate an order placed before supplies were taken at checkout.
+    $order->forceFill(['inventory_consumed_at' => null])->save();
+    $supply->update(['quantity_on_hand' => '2.000']);
 
     $this->actingAs($admin)
         ->from(route('admin.orders.show', $order))
@@ -324,6 +444,21 @@ test('production cannot start if a variant recipe has insufficient supplies', fu
         ->assertSessionHasErrors('inventory');
 
     expect($order->fresh()->status)->toBe(Order::STATUS_PENDING)
-        ->and($supply->fresh()->quantity_on_hand)->toBe('2.000')
-        ->and($supply->movements()->where('order_id', $order->id)->count())->toBe(0);
+        ->and($supply->fresh()->quantity_on_hand)->toBe('2.000');
+});
+
+test('a product option without a recipe can still be ordered and deducts nothing', function () {
+    $customer = User::factory()->create();
+    $product = Product::create(['name' => 'Sticker', 'category' => 'paper', 'price' => '5.00', 'is_active' => true]);
+    $variant = $product->variants()->firstOrFail();
+    $customer->cart()->create()->items()->create([
+        'product_id' => $product->id,
+        'product_variant_id' => $variant->id,
+        'quantity' => 2,
+    ]);
+
+    $this->actingAs($customer)->post(route('orders.store'))->assertRedirect(route('orders.show', 1));
+
+    expect(Order::count())->toBe(1)
+        ->and(InventoryMovement::count())->toBe(0);
 });

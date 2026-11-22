@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Edit account | Print Studio')
+@section('title', 'Edit account | Graphic Zone')
 
 @section('content')
     <section class="max-w-2xl">

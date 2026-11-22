@@ -23,5 +23,5 @@
             <tr><td class="px-4 py-8 text-center text-gray-500" colspan="6">No variants defined.</td></tr>
         @endforelse
     </tbody></table></div>
-    <p class="mt-4 text-sm text-gray-600">Each recipe quantity is consumed from raw supplies per one finished unit when an order enters production. Default options preserve compatibility with existing products.</p>
+    <p class="mt-4 text-sm text-gray-600">Each recipe quantity is taken from raw supplies per one finished unit when a priced order is placed or a quote is accepted, and returned if the order is cancelled. Options without a recipe are not stock-tracked. Default options preserve compatibility with existing products.</p>
 @endsection
