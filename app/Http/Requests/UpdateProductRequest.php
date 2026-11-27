@@ -2,11 +2,15 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\HasImageValidationMessages;
+
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class UpdateProductRequest extends FormRequest
 {
+    use HasImageValidationMessages;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -29,5 +33,13 @@ class UpdateProductRequest extends FormRequest
             'lock_version' => ['required', 'integer', 'min:0'],
             'is_active' => ['sometimes', 'boolean'],
         ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return $this->imageMessages();
     }
 }

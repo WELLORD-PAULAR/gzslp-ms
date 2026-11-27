@@ -2,7 +2,9 @@
 
 namespace App\Notifications;
 
-use App\Services\Sms\SmsMessage;
+use App\Channels\VerificationChannel;
+use App\Models\VerificationCode;
+use App\Services\Verification\VerificationMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
@@ -17,14 +19,15 @@ class VerifySmsOtp extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['sms'];
+        return [VerificationChannel::class];
     }
 
-    public function toSms(object $notifiable): SmsMessage
+    public function toVerification(object $notifiable): VerificationMessage
     {
-        return SmsMessage::make(
-            'Graphic Zone verification code: '.$this->code
-            .'. It expires in '.config('verification.code_ttl_minutes').' minutes. Do not share this code.',
+        return new VerificationMessage(
+            VerificationCode::CHANNEL_SMS,
+            (string) $notifiable->phone,
+            $this->code,
         );
     }
 }

@@ -58,92 +58,17 @@ class Order extends Model
         return $this->hasMany(OrderItem::class);
     }
 
-    public function payments(): HasMany
-    {
-        return $this->hasMany(Payment::class);
-    }
-
-    public function succeededPayments(): HasMany
-    {
-        return $this->hasMany(Payment::class)->where('status', Payment::STATUS_SUCCEEDED);
-    }
-
     /**
-     * Settled payments from the loaded relation when available, so list views
-     * can show payment state without one query per order.
-     *
-     * @return \Illuminate\Support\Collection<int, Payment>
-     */
-    private function settledPayments()
-    {
-        return $this->relationLoaded('payments')
-            ? $this->payments->where('status', Payment::STATUS_SUCCEEDED)
-            : $this->succeededPayments()->get();
-    }
-
-    public function hasSucceededPayments(): bool
-    {
-        return $this->relationLoaded('payments')
-            ? $this->payments->contains(fn (Payment $payment): bool => $payment->isSuccessful())
-            : $this->succeededPayments()->exists();
-    }
-
-    public function paidAmountCents(): int
-    {
-        return (int) round($this->settledPayments()->sum(
-            fn (Payment $payment): float => (float) $payment->amount,
-        ) * 100);
-    }
-
-    public function amountDueCents(): ?int
-    {
-        $total = $this->current_total;
-
-        if ($total === null) {
-            return null;
-        }
-
-        return max(0, (int) round((float) $total * 100) - $this->paidAmountCents());
-    }
-
-    public function amountDue(): ?string
-    {
-        $cents = $this->amountDueCents();
-
-        return $cents === null ? null : number_format($cents / 100, 2, '.', '');
-    }
-
-    /**
-     * A quote is only chargeable once the customer has accepted it, which
-     * moves the order into processing. A quote_sent order has a quoted total
-     * but must not be paid before that acceptance.
+     * A final total exists once every order line has a price, or a quote has
+     * been issued. Quote-requested orders return null until they are priced.
      */
     public function hasFinalTotal(): bool
     {
-        return in_array($this->status, [
-            self::STATUS_PENDING,
-            self::STATUS_PROCESSING,
-            self::STATUS_COMPLETED,
-        ], true) && $this->current_total !== null;
-    }
-
-    public function needsPayment(): bool
-    {
-        return $this->hasFinalTotal() && ($this->amountDueCents() ?? 0) > 0;
-    }
-
-    public function isPaid(): bool
-    {
-        return $this->hasFinalTotal() && ! $this->needsPayment();
+        return $this->current_total !== null;
     }
 
     public function canBeCancelledByCustomer(): bool
     {
-        // A paid order needs a refund decision before stock is returned.
-        if ($this->hasSucceededPayments()) {
-            return false;
-        }
-
         return in_array($this->status, [
             self::STATUS_PENDING,
             self::STATUS_QUOTE_REQUESTED,
@@ -151,15 +76,23 @@ class Order extends Model
         ], true);
     }
 
+    public function isAwaitingQuote(): bool
+    {
+        return $this->status === self::STATUS_QUOTE_REQUESTED;
+    }
+
+    public function hasQuote(): bool
+    {
+        return $this->quoted_total !== null;
+    }
+
     public function allowedAdminStatuses(): array
     {
-        $cancellable = $this->hasSucceededPayments() ? [] : [self::STATUS_CANCELLED];
-
         return match ($this->status) {
-            self::STATUS_PENDING => array_merge([self::STATUS_PROCESSING], $cancellable),
-            self::STATUS_QUOTE_REQUESTED => array_merge([self::STATUS_QUOTE_SENT], $cancellable),
-            self::STATUS_QUOTE_SENT => $cancellable,
-            self::STATUS_PROCESSING => array_merge([self::STATUS_COMPLETED], $cancellable),
+            self::STATUS_PENDING => [self::STATUS_PROCESSING, self::STATUS_CANCELLED],
+            self::STATUS_QUOTE_REQUESTED => [self::STATUS_QUOTE_SENT, self::STATUS_CANCELLED],
+            self::STATUS_QUOTE_SENT => [self::STATUS_CANCELLED],
+            self::STATUS_PROCESSING => [self::STATUS_COMPLETED, self::STATUS_CANCELLED],
             default => [],
         };
     }

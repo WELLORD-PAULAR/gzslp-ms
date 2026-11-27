@@ -16,7 +16,7 @@ class UpdateSupplierRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:25'],
+            'phone' => ['nullable', 'digits_between:7,15'],
             'address' => ['nullable', 'string', 'max:255'],
             'is_active' => ['required', 'boolean'],
         ];

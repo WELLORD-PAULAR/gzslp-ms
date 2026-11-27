@@ -1,5 +1,38 @@
 import './bootstrap';
 
+document.querySelectorAll('[data-menu-toggle]').forEach((button) => {
+	const panel = document.getElementById(button.getAttribute('aria-controls') ?? '');
+
+	if (!panel) {
+		return;
+	}
+
+	const close = () => {
+		panel.classList.add('hidden');
+		button.setAttribute('aria-expanded', 'false');
+		button.setAttribute('aria-label', 'Open navigation menu');
+	};
+
+	button.addEventListener('click', () => {
+		const isOpen = !panel.classList.contains('hidden');
+		panel.classList.toggle('hidden', isOpen);
+		button.setAttribute('aria-expanded', String(!isOpen));
+		button.setAttribute('aria-label', isOpen ? 'Open navigation menu' : 'Close navigation menu');
+	});
+
+	panel.addEventListener('click', (event) => {
+		if (event.target.closest('a')) {
+			close();
+		}
+	});
+
+	document.addEventListener('keydown', (event) => {
+		if (event.key === 'Escape') {
+			close();
+		}
+	});
+});
+
 const authOverlay = document.querySelector('[data-auth-overlay]');
 
 if (authOverlay) {

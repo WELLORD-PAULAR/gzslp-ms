@@ -4,9 +4,9 @@ use App\Models\User;
 use App\Models\VerificationCode;
 use App\Notifications\VerifyEmailOtp;
 use App\Notifications\VerifySmsOtp;
-use App\Services\Sms\SmsGateway;
-use App\Services\Sms\SmsMessage;
+use App\Services\Verification\VerificationGateway;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 
 uses(RefreshDatabase::class);
@@ -17,7 +17,7 @@ test('registration sends both email and sms codes when a phone is supplied', fun
     $this->post(route('register.store'), [
         'name' => 'Verified Customer',
         'email' => 'both@example.com',
-        'phone' => '+63 917 555 0100',
+        'phone' => '639175550100',
         'password' => 'password123',
         'password_confirmation' => 'password123',
     ])->assertRedirect(route('account.dashboard'));
@@ -120,33 +120,31 @@ test('a new code invalidates the previous one and resends are throttled', functi
     expect($user->fresh()->hasVerifiedEmail())->toBeTrue();
 });
 
-test('an sms code is delivered through the sms gateway and verifies the phone', function () {
+test('an sms code is delivered through the verification gateway and verifies the phone', function () {
     $user = User::factory()->create([
-        'phone' => '+63 917 555 0123',
+        'phone' => '639175550123',
         'email_verified_at' => now(),
         'phone_verified_at' => null,
     ]);
 
-    $message = null;
-    $gateway = Mockery::mock(SmsGateway::class);
+    $sent = [];
+    $gateway = Mockery::mock(VerificationGateway::class);
     $gateway->shouldReceive('send')
         ->once()
-        ->with($user->phone, Mockery::on(function (SmsMessage $sms) use (&$message): bool {
-            $message = $sms->content;
+        ->with('sms', (string) $user->phone, Mockery::on(function (string $code) use (&$sent): bool {
+            $sent['code'] = $code;
 
             return true;
         }));
-    $this->app->instance(SmsGateway::class, $gateway);
+    $this->app->instance(VerificationGateway::class, $gateway);
 
     $this->actingAs($user)
         ->post(route('verification.send', 'sms'))
         ->assertRedirect();
 
-    expect($message)->toContain('Graphic Zone verification code:');
-    preg_match('/\b(\d{6})\b/', (string) $message, $matches);
-    $code = $matches[1];
+    expect($sent['code'])->toMatch('/^\d{6}$/');
 
-    $this->post(route('verification.verify', 'sms'), ['code' => $code])
+    $this->post(route('verification.verify', 'sms'), ['code' => $sent['code']])
         ->assertRedirect(route('account.dashboard'));
 
     expect($user->fresh()->hasVerifiedPhone())->toBeTrue()
@@ -167,7 +165,7 @@ test('changing an email clears verification and sends a fresh code', function ()
     Notification::fake();
     $user = User::factory()->create([
         'email' => 'old@example.com',
-        'phone' => '+63 917 555 0199',
+        'phone' => '639175550199',
         'email_verified_at' => now(),
         'phone_verified_at' => now(),
     ]);
@@ -213,7 +211,7 @@ test('an admin changing a managed phone clears its verification', function () {
     $admin->forceFill(['role' => User::ROLE_ADMIN])->save();
 
     $customer = User::factory()->create([
-        'phone' => '+63 917 555 0101',
+        'phone' => '639175550101',
         'email_verified_at' => now(),
         'phone_verified_at' => now(),
     ]);
@@ -221,11 +219,31 @@ test('an admin changing a managed phone clears its verification', function () {
     $this->actingAs($admin)->patch(route('admin.users.update', $customer), [
         'name' => $customer->name,
         'email' => $customer->email,
-        'phone' => '+63 917 555 0999',
+        'phone' => '639175550999',
         'role' => User::ROLE_CUSTOMER,
         'is_active' => true,
     ])->assertRedirect(route('admin.users.index'));
 
     expect($customer->fresh()->hasVerifiedPhone())->toBeFalse()
         ->and($customer->fresh()->hasVerifiedEmail())->toBeTrue();
+});
+
+test('the http verification gateway posts the code with the configured api key', function () {
+    config([
+        'verification.api_url' => 'https://verify.example.com/send',
+        'verification.api_key' => 'test-api-key',
+        'verification.from_email' => 'no-reply@example.com',
+    ]);
+    Http::fake(['verify.example.com/*' => Http::response(['ok' => true])]);
+
+    app(\App\Services\Verification\HttpVerificationGateway::class)
+        ->send('email', 'customer@example.com', '123456');
+
+    Http::assertSent(function ($request): bool {
+        return $request->url() === 'https://verify.example.com/send'
+            && $request['channel'] === 'email'
+            && $request['to'] === 'customer@example.com'
+            && $request['code'] === '123456'
+            && $request->hasHeader('Authorization', 'Bearer test-api-key');
+    });
 });

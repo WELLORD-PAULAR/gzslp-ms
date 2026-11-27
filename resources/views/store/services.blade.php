@@ -38,13 +38,13 @@
                         <p class="line-clamp-2 text-[10px] leading-snug text-gray-500">{{ $service->description }}</p>
                     @endif
                     <p class="mt-auto pt-1 text-sm font-bold text-[#008da5]">{{ $service->starting_price === null ? 'Request a quote' : 'From '.number_format((float) $service->starting_price, 2) }}</p>
-                    <form class="mt-1 flex items-end gap-1" method="POST" action="{{ route('cart.items.store') }}">
+                    <form class="mt-1 grid grid-cols-[auto_minmax(0,1fr)] items-end gap-1" method="POST" action="{{ route('cart.items.store') }}">
                         @csrf
                         <input name="item_type" type="hidden" value="service">
                         <input name="item_id" type="hidden" value="{{ $service->id }}">
                         <label class="text-[10px] text-gray-500" for="quantity-{{ $service->id }}">Qty</label>
-                        <input class="w-14 rounded border border-gray-300 px-2 py-1 text-center text-sm" id="quantity-{{ $service->id }}" name="quantity" type="number" min="1" max="99" value="1" required>
-                        <button class="rounded bg-[#008da5] px-1.5 py-0.5 text-[9px] font-semibold leading-tight text-white hover:bg-[#006f83]" type="submit">{{ $service->starting_price === null ? 'Add for quote' : 'Add to cart' }}</button>
+                        <input class="w-full rounded border border-gray-300 px-2 py-1 text-center text-sm" id="quantity-{{ $service->id }}" name="quantity" type="number" min="1" max="99" value="1" required>
+                        <button class="col-span-2 rounded bg-[#008da5] px-1.5 py-0.5 text-[9px] font-semibold leading-tight text-white hover:bg-[#006f83]" type="submit">{{ $service->starting_price === null ? 'Add for quote' : 'Add to cart' }}</button>
                     </form>
                 </div>
             </article>

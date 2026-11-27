@@ -27,7 +27,8 @@ class ReportController extends Controller
         $completedOrderValue = (clone $completedOrders)
             ->selectRaw('COALESCE(SUM(CASE WHEN quoted_total IS NOT NULL THEN quoted_total ELSE subtotal END), 0) as total')
             ->value('total');
-        $orders = (clone $periodOrders)->with(['user', 'items'])->latest()->paginate(50)->withQueryString();
+        $perPage = max(10, min(100, (int) $request->input('per_page', 25)));
+        $orders = (clone $periodOrders)->with(['user', 'items'])->latest()->paginate($perPage)->withQueryString();
         $catalogCounts = [
             'active_products' => Product::where('is_active', true)->count(),
             'hidden_products' => Product::where('is_active', false)->count(),

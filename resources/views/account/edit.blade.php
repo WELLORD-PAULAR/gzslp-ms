@@ -23,7 +23,7 @@
             </div>
             <div>
                 <label class="block text-sm font-medium" for="phone">Phone number</label>
-                <input class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="phone" name="phone" type="tel" value="{{ old('phone', $user->phone) }}" autocomplete="tel" maxlength="25">
+                <input class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="phone" name="phone" type="tel" inputmode="numeric" pattern="[0-9]{7,15}" value="{{ old('phone', $user->phone) }}" autocomplete="tel" placeholder="639175550101">
                 @error('phone')<p class="mt-1 text-sm text-red-700">{{ $message }}</p>@enderror
             </div>
             <button class="rounded bg-emerald-800 px-4 py-2 text-sm font-medium text-white" type="submit">Save profile</button>

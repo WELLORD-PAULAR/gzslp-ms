@@ -63,7 +63,7 @@
 
                         <div class="mt-5 flex flex-wrap items-end justify-between gap-4">
                             @if ($item->is_available)
-                                <form class="flex items-end gap-2" method="POST" action="{{ route('cart.items.update', $item) }}">
+                                <form class="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2" method="POST" action="{{ route('cart.items.update', $item) }}">
                                     @csrf
                                     @method('PATCH')
                                     <div>
@@ -101,7 +101,6 @@
                 @else
                     <p class="mt-4 flex justify-between text-sm"><span>Subtotal</span><span class="font-semibold">{{ number_format($totalCents / 100, 2) }}</span></p>
                 @endif
-                <p class="mt-5 border-t border-gray-200 pt-4 text-xs text-gray-500">Submit your order first, then pay from the order details page using the demo gateway.</p>
                 @if (! $hasUnavailableItems)
                     <form class="mt-5 border-t border-gray-200 pt-5" method="POST" action="{{ route('orders.store') }}" enctype="multipart/form-data">
                         @csrf
@@ -110,7 +109,7 @@
                         @error('customer_note') <p class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror
                         <label class="mt-4 block text-sm font-medium" for="artwork">Attach custom artwork <span class="font-normal text-gray-500">(JPG, PNG or PDF, up to 10 MB)</span></label>
                         <input class="mt-2 block w-full text-sm" id="artwork" name="artwork" type="file" accept="image/jpeg,image/png,application/pdf">
-                        @error('artwork')<p class="mt-1 text-sm text-red-700">{{ $message }}</p>@enderror
+                        @error('artwork')<p class="mt-2 rounded border-l-4 border-red-700 bg-red-50 px-3 py-2 text-sm font-medium text-red-800" role="alert"><span class="font-bold">Artwork not uploaded:</span> {{ $message }}</p>@enderror
                         @error('cart') <p class="mt-2 text-sm text-red-700">{{ $message }}</p> @enderror
                         <button class="mt-4 w-full rounded bg-emerald-800 px-4 py-2 font-medium text-white hover:bg-emerald-900" type="submit">{{ $requiresQuote ? 'Request a quote' : 'Place order' }}</button>
                     </form>

@@ -1,11 +1,9 @@
 <?php
 
 use App\Providers\AppServiceProvider;
-use App\Providers\PaymentServiceProvider;
-use App\Providers\SmsServiceProvider;
+use App\Providers\VerificationServiceProvider;
 
 return [
     AppServiceProvider::class,
-    PaymentServiceProvider::class,
-    SmsServiceProvider::class,
+    VerificationServiceProvider::class,
 ];

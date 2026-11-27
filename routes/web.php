@@ -16,8 +16,8 @@ use App\Http\Controllers\Admin\SupplierController;
 use App\Http\Controllers\Admin\ProductVariantController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\OrderController;
-use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\Service;
 use App\Models\VerificationCode;
@@ -119,7 +119,6 @@ Route::middleware('auth')->group(function () {
         Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
         Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
         Route::get('/orders/{order}/artwork', [OrderController::class, 'downloadArtwork'])->name('orders.artwork');
-        Route::post('/orders/{order}/payment', [PaymentController::class, 'store'])->name('orders.payment.store');
         Route::patch('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
         Route::patch('/orders/{order}/accept-quote', [OrderController::class, 'acceptQuote'])->name('orders.accept-quote');
     });
@@ -132,7 +131,11 @@ Route::middleware('auth')->group(function () {
 
     Route::prefix('admin')->name('admin.')->middleware('can:manage-shop')->group(function () {
         Route::get('/dashboard', function () {
-            return view('admin.dashboard');
+            $recentOrders = Order::with('user')
+                ->latest()
+                ->paginate(10, ['*'], 'orders_page');
+
+            return view('admin.dashboard', compact('recentOrders'));
         })->name('dashboard');
 
         Route::get('/account', [AdminAccountController::class, 'index'])->name('account.dashboard');
@@ -162,7 +165,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
         Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
         Route::get('/orders/{order}/artwork', [AdminOrderController::class, 'downloadArtwork'])->name('orders.artwork');
-        Route::patch('/orders/{order}', [AdminOrderController::class, 'update'])->name('orders.update');
         Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
         Route::get('/inventory/create', [InventoryController::class, 'create'])->name('inventory.create');
         Route::post('/inventory', [InventoryController::class, 'store'])->name('inventory.store');
@@ -172,6 +174,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/inventory/{inventoryItem}/movements', [InventoryController::class, 'recordMovement'])->name('inventory.movements.store');
         Route::resource('suppliers', SupplierController::class)->except('show');
         Route::middleware('can:access-admin')->group(function () {
+            Route::patch('/orders/{order}', [AdminOrderController::class, 'update'])->name('orders.update');
             Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
             Route::resource('users', AdminUserController::class)->except('show');
         });

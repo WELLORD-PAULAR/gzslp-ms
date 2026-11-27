@@ -16,6 +16,7 @@ class ReportFilterRequest extends FormRequest
         return [
             'date_from' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:date_to'],
             'date_to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:date_from'],
+            'per_page' => ['nullable', 'integer', 'min:10', 'max:100'],
         ];
     }
 }

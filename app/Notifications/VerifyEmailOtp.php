@@ -2,8 +2,10 @@
 
 namespace App\Notifications;
 
+use App\Channels\VerificationChannel;
+use App\Models\VerificationCode;
+use App\Services\Verification\VerificationMessage;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 class VerifyEmailOtp extends Notification
@@ -17,17 +19,15 @@ class VerifyEmailOtp extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['mail'];
+        return [VerificationChannel::class];
     }
 
-    public function toMail(object $notifiable): MailMessage
+    public function toVerification(object $notifiable): VerificationMessage
     {
-        return (new MailMessage)
-            ->subject('Verify your Graphic Zone account')
-            ->greeting('Hello '.$notifiable->name.',')
-            ->line('Use the code below to verify your email address.')
-            ->line('**'.$this->code.'**')
-            ->line('This code expires in '.config('verification.code_ttl_minutes').' minutes and can only be used once.')
-            ->line('If you did not create this account, you can ignore this message.');
+        return new VerificationMessage(
+            VerificationCode::CHANNEL_EMAIL,
+            (string) $notifiable->email,
+            $this->code,
+        );
     }
 }

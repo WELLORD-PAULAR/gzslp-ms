@@ -10,7 +10,7 @@
 
         @if (session('status'))<p class="gz-panel mt-5 border-l-4 border-cyan-500 px-4 py-3 text-sm" role="status">{{ session('status') }}</p>@endif
 
-        <form class="mt-6 space-y-5 border-y border-gray-200 py-6" method="POST" action="{{ route('admin.account.update') }}">
+        <form class="mt-6 space-y-5 border-y border-gray-200 py-6" method="POST" action="{{ route('admin.account.update') }}" onsubmit="return window.confirm('Save your account details?')">
             @csrf
             @method('PATCH')
             <div>
@@ -25,7 +25,7 @@
             </div>
             <div>
                 <label class="block text-sm font-medium" for="phone">Phone number</label>
-                <input class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="phone" name="phone" type="tel" value="{{ old('phone', $user->phone) }}" autocomplete="tel" maxlength="25">
+                <input class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="phone" name="phone" type="tel" inputmode="numeric" pattern="[0-9]{7,15}" value="{{ old('phone', $user->phone) }}" autocomplete="tel" placeholder="639175550101">
                 @error('phone')<p class="mt-1 text-sm text-red-700">{{ $message }}</p>@enderror
             </div>
             <button class="gz-btn gz-btn-primary" type="submit">Save profile</button>

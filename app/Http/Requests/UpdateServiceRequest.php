@@ -2,10 +2,14 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\HasImageValidationMessages;
+
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateServiceRequest extends FormRequest
 {
+    use HasImageValidationMessages;
+
     public function authorize(): bool
     {
         return $this->user()?->can('manage-shop') ?? false;
@@ -21,5 +25,13 @@ class UpdateServiceRequest extends FormRequest
             'lock_version' => ['required', 'integer', 'min:0'],
             'is_active' => ['sometimes', 'boolean'],
         ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return $this->imageMessages();
     }
 }

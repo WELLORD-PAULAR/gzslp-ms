@@ -19,10 +19,13 @@
             <form method="POST" action="{{ route('logout') }}">@csrf
                 <button class="rounded-lg border border-gray-200 px-3 py-2 font-bold text-gray-600 hover:bg-gray-50" type="submit">Log out</button>
             </form>
+            <button class="gz-menu-toggle rounded-lg border border-gray-200 p-2 text-gray-700" type="button" data-menu-toggle aria-controls="admin-sidebar" aria-expanded="false" aria-label="Open navigation menu">
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </button>
         </div>
     </header>
     <div class="gz-admin-shell">
-        <aside class="gz-sidebar">
+        <aside class="gz-sidebar hidden" id="admin-sidebar" data-menu-panel>
             <p class="gz-side-label">Workspace</p>
             <nav aria-label="Workspace navigation">
                 <a class="gz-side-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" href="{{ route('admin.dashboard') }}"><span>▦</span> Overview</a>

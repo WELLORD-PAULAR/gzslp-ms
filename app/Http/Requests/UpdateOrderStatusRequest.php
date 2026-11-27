@@ -10,7 +10,7 @@ class UpdateOrderStatusRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('manage-shop') ?? false;
+        return $this->user()?->can('access-admin') ?? false;
     }
 
     public function rules(): array

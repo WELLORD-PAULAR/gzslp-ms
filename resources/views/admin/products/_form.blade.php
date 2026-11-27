@@ -7,7 +7,7 @@
         @error('name') <p class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror
     </div>
     <div>
-        <label class="block text-sm font-medium" for="category">Finished product type</label>
+        <label class="block text-sm font-medium" for="category">Product catalog</label>
         <select class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="category" name="category" required>
             @foreach (['paper' => 'Paper product', 'mug' => 'Mug', 'shirt' => 'Shirt / apparel', 'tarpaulin' => 'Tarpaulin', 'other' => 'Other / custom product'] as $value => $label)
                 <option value="{{ $value }}" @selected(old('category', $product->category ?? 'paper') === $value)>{{ $label }}</option>
@@ -27,7 +27,7 @@
             <img class="mt-3 aspect-[4/3] w-48 rounded border border-gray-200 object-cover" src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($product->image_path) }}" alt="Current image for {{ $product->name }}">
         @endif
         <input class="mt-2 block w-full text-sm" id="image" name="image" type="file" accept="image/jpeg,image/png,image/webp">
-        @error('image')<p class="mt-1 text-sm text-red-700">{{ $message }}</p>@enderror
+        @error('image')<p class="mt-2 rounded border-l-4 border-red-700 bg-red-50 px-3 py-2 text-sm font-medium text-red-800" role="alert"><span class="font-bold">Image not uploaded:</span> {{ $message }}</p>@enderror
     </div>
     <div>
         <label class="block text-sm font-medium" for="price">Price</label>

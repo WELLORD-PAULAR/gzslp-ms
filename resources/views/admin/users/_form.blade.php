@@ -11,7 +11,7 @@
     </div>
     <div>
         <label class="block text-sm font-medium" for="phone">Phone number</label>
-        <input class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="phone" name="phone" type="tel" value="{{ old('phone', $managedUser->phone) }}" maxlength="25">
+        <input class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="phone" name="phone" type="tel" inputmode="numeric" pattern="[0-9]{7,15}" value="{{ old('phone', $managedUser->phone) }}" placeholder="639175550101">
         @error('phone')<p class="mt-1 text-sm text-red-700">{{ $message }}</p>@enderror
     </div>
     <div>

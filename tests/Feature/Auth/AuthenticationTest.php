@@ -11,7 +11,7 @@ test('a visitor can register and is signed in', function () {
     $response = $this->post(route('register.store'), [
         'name' => 'Test Customer',
         'email' => 'customer@example.com',
-        'phone' => '+1 555 0100',
+        'phone' => '15550100',
         'password' => 'password123',
         'password_confirmation' => 'password123',
         'role' => User::ROLE_ADMIN,
@@ -21,7 +21,7 @@ test('a visitor can register and is signed in', function () {
     $this->assertAuthenticated();
     $this->assertDatabaseHas('users', [
         'email' => 'customer@example.com',
-        'phone' => '+1 555 0100',
+        'phone' => '15550100',
         'role' => User::ROLE_CUSTOMER,
     ]);
     expect(Hash::check('password123', User::first()->password))->toBeTrue();

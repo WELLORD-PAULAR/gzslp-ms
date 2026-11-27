@@ -34,23 +34,21 @@
                     @endif
                     <p class="mt-2 text-sm text-gray-600">Quantity: {{ $item->quantity }}</p>
                 </div>
-                <p class="font-medium">{{ $item->unit_price === null ? 'Quote required' : number_format((float) $item->line_total, 2) }}</p>
+                <p class="font-medium">{{ $item->unit_price === null ? ($order->isAwaitingQuote() ? 'Quote required' : 'Included in quote') : number_format((float) $item->line_total, 2) }}</p>
             </article>
         @endforeach
     </section>
 
     <section class="mt-6 ml-auto max-w-sm border-y border-gray-200 py-5">
-        @if ($order->status === \App\Models\Order::STATUS_QUOTE_REQUESTED)
+        @if ($order->isAwaitingQuote())
             <p class="text-sm text-gray-600">The shop is preparing a quote. Your pre-quote subtotal is {{ number_format((float) $order->subtotal, 2) }}.</p>
         @else
-            <p class="flex justify-between font-semibold"><span>{{ $order->status === \App\Models\Order::STATUS_QUOTE_SENT ? 'Quoted total' : 'Order total' }}</span><span>{{ number_format((float) $order->current_total, 2) }}</span></p>
+            <p class="flex justify-between font-semibold"><span>{{ $order->hasQuote() ? 'Quoted total' : 'Order total' }}</span><span>{{ number_format((float) $order->current_total, 2) }}</span></p>
         @endif
         @if ($order->customer_note)<p class="mt-4 text-sm text-gray-600"><span class="font-medium">Your note:</span> {{ $order->customer_note }}</p>@endif
         @if ($order->admin_note)<p class="mt-3 text-sm text-gray-600"><span class="font-medium">Shop update:</span> {{ $order->admin_note }}</p>@endif
         @if ($order->artwork_path)<p class="mt-3 text-sm"><a class="font-medium underline" href="{{ route('orders.artwork', $order) }}">Download your submitted artwork</a></p>@endif
     </section>
-
-    @include('orders._payment', ['order' => $order])
 
     @if ($order->canBeCancelledByCustomer())
         <div class="mt-6 flex flex-wrap gap-3">

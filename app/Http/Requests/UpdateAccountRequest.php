@@ -17,7 +17,7 @@ class UpdateAccountRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($this->user()->id)],
-            'phone' => ['nullable', 'string', 'max:25'],
+            'phone' => ['nullable', 'digits_between:7,15'],
         ];
     }
 }
