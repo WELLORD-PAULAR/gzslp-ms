@@ -8,7 +8,7 @@
         <div class="mt-4 flex flex-wrap items-start justify-between gap-4"><div><p class="text-sm font-semibold uppercase text-gray-500">{{ \Illuminate\Support\Str::headline($item->category) }}</p><h1 class="mt-2 text-3xl font-semibold">{{ $item->name }}</h1>@if($item->sku)<p class="mt-2 text-sm text-gray-500">SKU {{ $item->sku }}</p>@endif</div><a class="rounded border border-gray-300 px-4 py-2 text-sm font-medium" href="{{ route('admin.inventory.edit', $item) }}">Edit supply details</a></div>
     </section>
 
-    @if(session('status'))<p class="mt-5 border-l-4 border-emerald-700 bg-white px-4 py-3 text-sm" role="status">{{ session('status') }}</p>@endif
+    @if(session('status'))<p class="mt-5 border-l-4 border-cyan-500 bg-white px-4 py-3 text-sm" role="status">{{ session('status') }}</p>@endif
     @if($errors->any())<div class="mt-5 border-l-4 border-red-700 bg-white px-4 py-3 text-sm text-red-800" role="alert">@foreach($errors->all() as $error)<p>{{ $error }}</p>@endforeach</div>@endif
 
     <section class="mt-7 grid gap-8 lg:grid-cols-[1fr_22rem]">
@@ -22,13 +22,16 @@
                     <tr><td class="px-3 py-7 text-center text-gray-500" colspan="6">No stock movements yet.</td></tr>
                 @endforelse
             </tbody></table></div>
-            <div class="mt-4">{{ $movements->links() }}</div>
+            <div class="mt-4">
+                {{ $movements->links() }}
+                @include('partials.pagination-status', ['paginator' => $movements])
+            </div>
         </div>
 
         <aside class="h-fit border-y border-gray-200 py-5">
             <h2 class="font-semibold">Record stock movement</h2>
             <p class="mt-2 text-sm text-gray-600">Receiving increases stock; usage decreases it; stocktake sets the balance to a counted amount.</p>
-            <form class="mt-5 space-y-4" method="POST" action="{{ route('admin.inventory.movements.store', $item) }}">
+            <form class="mt-5 space-y-4" method="POST" action="{{ route('admin.inventory.movements.store', $item) }}" onsubmit="return window.confirm('Record this stock movement? The on-hand balance will change.')">
                 @csrf
                 <div><label class="block text-sm font-medium" for="type">Movement</label><select class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="type" name="type" required><option value="received" @selected(old('type') === 'received')>Receive supplies</option><option value="used" @selected(old('type') === 'used')>Record usage</option><option value="stocktake" @selected(old('type') === 'stocktake')>Set counted balance</option></select>@error('type')<p class="mt-1 text-sm text-red-700">{{ $message }}</p>@enderror</div>
                 <div><label class="block text-sm font-medium" for="quantity">Quantity / counted balance</label><input class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="quantity" name="quantity" type="number" min="0" max="999999999.999" step="0.001" value="{{ old('quantity') }}" required>@error('quantity')<p class="mt-1 text-sm text-red-700">{{ $message }}</p>@enderror</div>

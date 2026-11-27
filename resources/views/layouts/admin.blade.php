@@ -9,10 +9,16 @@
 </head>
 <body class="min-h-screen text-gray-900">
     <header class="gz-admin-top">
-        <a class="gz-brand" href="{{ route('admin.dashboard') }}">
-            <img src="{{ asset('images/graphic-zone-logo.jpg') }}" alt="Graphic Zone logo">
-            <span class="gz-brand-name">GRAPHIC ZONE<small>PRINTING SERVICES</small></span>
-        </a>
+        <div class="flex items-center gap-3">
+            <button class="gz-menu-toggle" type="button" data-nav-toggle data-nav-target="#workspace-navigation" aria-controls="workspace-navigation" aria-expanded="false" aria-label="Open workspace menu">
+                <span class="gz-menu-icon" aria-hidden="true">☰</span>
+                <span class="gz-menu-icon-close" aria-hidden="true">×</span>
+            </button>
+            <a class="gz-brand" href="{{ route('admin.dashboard') }}">
+                <img src="{{ asset('images/graphic-zone-logo.jpg') }}" alt="Graphic Zone logo">
+                <span class="gz-brand-name">GRAPHIC ZONE<small>PRINTING SERVICES</small></span>
+            </a>
+        </div>
         <div class="flex items-center gap-3 text-sm">
             <span class="hidden text-gray-500 sm:inline">Signed in as <strong class="text-gray-800">{{ auth()->user()->name }}</strong></span>
             <span class="rounded-full bg-yellow-100 px-3 py-1 text-xs font-black tracking-wider text-gray-800">{{ auth()->user()->isAdmin() ? 'ADMIN' : 'EMPLOYEE' }}</span>
@@ -22,7 +28,7 @@
         </div>
     </header>
     <div class="gz-admin-shell">
-        <aside class="gz-sidebar">
+        <aside class="gz-sidebar" id="workspace-navigation" data-mobile-nav>
             <p class="gz-side-label">Workspace</p>
             <nav aria-label="Workspace navigation">
                 <a class="gz-side-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" href="{{ route('admin.dashboard') }}"><span>▦</span> Overview</a>

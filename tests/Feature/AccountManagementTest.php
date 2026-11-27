@@ -24,12 +24,12 @@ test('a customer can update personal details and change password', function () {
     $this->patch(route('account.update'), [
         'name' => 'Updated Customer',
         'email' => 'new@example.com',
-        'phone' => '+63 912 345 6789',
+        'phone' => 639123456789,
     ])->assertRedirect(route('account.dashboard'));
 
     expect($customer->fresh()->name)->toBe('Updated Customer')
         ->and($customer->fresh()->email)->toBe('new@example.com')
-        ->and($customer->fresh()->phone)->toBe('+63 912 345 6789')
+        ->and($customer->fresh()->phone)->toBe(639123456789)
         ->and($customer->fresh()->email_verified_at)->toBeNull();
 
     $this->patch(route('account.password.update'), [
@@ -76,12 +76,12 @@ test('an employee can update their own details and change password from the work
     $this->patch(route('admin.account.update'), [
         'name' => 'Updated Employee',
         'email' => 'employee-new@example.com',
-        'phone' => '+63 917 000 0000',
+        'phone' => 639170000000,
     ])->assertRedirect(route('admin.account.dashboard'));
 
     expect($employee->fresh()->name)->toBe('Updated Employee')
         ->and($employee->fresh()->email)->toBe('employee-new@example.com')
-        ->and($employee->fresh()->phone)->toBe('+63 917 000 0000')
+        ->and($employee->fresh()->phone)->toBe(639170000000)
         ->and($employee->fresh()->email_verified_at)->toBeNull();
 
     $this->patch(route('admin.account.password.update'), [

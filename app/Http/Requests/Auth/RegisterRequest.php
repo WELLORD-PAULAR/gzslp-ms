@@ -2,10 +2,13 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Http\Requests\Concerns\ExplainsPhoneErrors;
 use Illuminate\Foundation\Http\FormRequest;
 
 class RegisterRequest extends FormRequest
 {
+    use ExplainsPhoneErrors;
+
     public function authorize(): bool
     {
         return true;
@@ -17,8 +20,14 @@ class RegisterRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
-            'phone' => ['nullable', 'string', 'max:25'],
+            'phone' => ['nullable', 'integer', 'digits_between:7,15'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ];
+    }
+
+    /** @return array<string, string> */
+    public function messages(): array
+    {
+        return $this->phoneMessages();
     }
 }

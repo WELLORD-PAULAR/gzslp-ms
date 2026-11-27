@@ -12,7 +12,7 @@
     </div>
 
     @if (session('status'))
-        <p class="mt-5 border-l-4 border-emerald-700 bg-white px-4 py-3 text-sm">{{ session('status') }}</p>
+        <p class="mt-5 border-l-4 border-cyan-500 bg-white px-4 py-3 text-sm">{{ session('status') }}</p>
     @endif
 
     <div class="mt-6 overflow-x-auto border-y border-gray-200 bg-white">
@@ -33,5 +33,10 @@
                 @endforelse
             </tbody>
         </table>
+    </div>
+
+    <div class="mt-5">
+        {{ $services->links() }}
+        @include('partials.pagination-status', ['paginator' => $services])
     </div>
 @endsection

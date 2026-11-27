@@ -7,16 +7,18 @@ use App\Http\Requests\StoreServiceRequest;
 use App\Http\Requests\UpdateServiceRequest;
 use App\Models\Service;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 class ServiceController extends Controller
 {
     public function index(): View
     {
         return view('admin.services.index', [
-            'services' => Service::latest()->get(),
+            'services' => Service::latest()->paginate(25),
         ]);
     }
 
@@ -30,7 +32,7 @@ class ServiceController extends Controller
         $data = $request->validated();
         unset($data['image']);
         $data['is_active'] = $request->boolean('is_active');
-        $data['image_path'] = $request->file('image')?->store('services', 'public');
+        $data['image_path'] = $this->storeImage($request, 'services');
 
         Service::create($data);
 
@@ -49,7 +51,7 @@ class ServiceController extends Controller
         unset($data['lock_version']);
         unset($data['image']);
         $data['is_active'] = $request->boolean('is_active');
-        $newImagePath = $request->file('image')?->store('services', 'public');
+        $newImagePath = $this->storeImage($request, 'services');
 
         if ($newImagePath !== null) {
             $data['image_path'] = $newImagePath;
@@ -86,5 +88,30 @@ class ServiceController extends Controller
         $service->delete();
 
         return redirect()->route('admin.services.index')->with('status', 'Service deleted.');
+    }
+
+    private function storeImage(Request $request, string $directory): ?string
+    {
+        $file = $request->file('image');
+
+        if (! $file) {
+            return null;
+        }
+
+        try {
+            $path = $file->store($directory, 'public');
+        } catch (Throwable) {
+            throw ValidationException::withMessages([
+                'image' => 'The image could not be saved. Check that the storage folder is writable and try again.',
+            ]);
+        }
+
+        if ($path === false) {
+            throw ValidationException::withMessages([
+                'image' => 'The image could not be saved. Check that the storage folder is writable and try again.',
+            ]);
+        }
+
+        return $path;
     }
 }

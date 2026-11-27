@@ -2,11 +2,14 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\ExplainsUploadErrors;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class StoreProductRequest extends FormRequest
 {
+    use ExplainsUploadErrors;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -28,5 +31,11 @@ class StoreProductRequest extends FormRequest
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'is_active' => ['sometimes', 'boolean'],
         ];
+    }
+
+    /** @return array<string, string> */
+    public function messages(): array
+    {
+        return $this->uploadMessages();
     }
 }

@@ -11,12 +11,14 @@
                 <h1 class="mt-2 text-3xl font-semibold">Order #{{ $order->id }}</h1>
                 <p class="mt-2 text-sm text-gray-600">{{ $order->user->name }} · {{ $order->user->email }} · {{ $order->created_at->format('M j, Y g:i A') }}</p>
             </div>
-            @include('orders._status', ['order' => $order])
+            @can('access-admin')
+                @include('orders._status', ['order' => $order])
+            @endcan
         </div>
     </section>
 
     @if (session('status'))
-        <p class="mt-5 border-l-4 border-emerald-700 bg-white px-4 py-3 text-sm" role="status">{{ session('status') }}</p>
+        <p class="mt-5 border-l-4 border-cyan-500 bg-white px-4 py-3 text-sm" role="status">{{ session('status') }}</p>
     @endif
 
     <section class="mt-8 divide-y divide-gray-200 border-y border-gray-200" aria-label="Order items">
@@ -36,16 +38,20 @@
     </section>
 
     <section class="mt-6 ml-auto max-w-md border-y border-gray-200 py-5">
-        <p class="flex justify-between text-sm"><span>Pre-quote subtotal</span><span class="font-semibold">{{ number_format((float) $order->subtotal, 2) }}</span></p>
-        @if ($order->quoted_total !== null)
-            <p class="mt-2 flex justify-between text-sm"><span>Quoted total</span><span class="font-semibold">{{ number_format((float) $order->quoted_total, 2) }}</span></p>
+        @if ($order->requiresQuote())
+            <p class="flex justify-between text-sm"><span>Pre-quote subtotal</span><span class="font-semibold">{{ number_format((float) $order->subtotal, 2) }}</span></p>
+            @if ($order->quoted_total !== null)
+                <p class="mt-2 flex justify-between text-sm"><span>Quoted total</span><span class="font-semibold">{{ number_format((float) $order->quoted_total, 2) }}</span></p>
+            @endif
+        @else
+            <p class="flex justify-between text-sm"><span>Order total</span><span class="font-semibold">{{ number_format((float) $order->current_total, 2) }}</span></p>
         @endif
         @if ($order->customer_note)<p class="mt-4 text-sm text-gray-600"><span class="font-medium">Customer note:</span> {{ $order->customer_note }}</p>@endif
         @if ($order->artwork_path)<p class="mt-3 text-sm"><a class="font-medium underline" href="{{ route('admin.orders.artwork', $order) }}">Download customer artwork</a></p>@endif
     </section>
 
     @if ($allowedStatuses)
-        <form class="mt-8 max-w-xl space-y-4 border-y border-gray-200 py-6" method="POST" action="{{ route('admin.orders.update', $order) }}">
+        <form class="mt-8 max-w-xl space-y-4 border-y border-gray-200 py-6" method="POST" action="{{ route('admin.orders.update', $order) }}" onsubmit="return window.confirm('Save this order update?')">
             @csrf
             @method('PATCH')
             <h2 class="text-lg font-semibold">Update order</h2>
@@ -59,11 +65,13 @@
                 </select>
                 @error('status')<p class="mt-1 text-sm text-red-700">{{ $message }}</p>@enderror
             </div>
-            <div>
-                <label class="block text-sm font-medium" for="quoted_total">Quoted total <span class="font-normal text-gray-500">(required when sending a quote)</span></label>
-                <input class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="quoted_total" name="quoted_total" type="number" min="0.01" max="99999999.99" step="0.01" value="{{ old('quoted_total', $order->quoted_total) }}">
-                @error('quoted_total')<p class="mt-1 text-sm text-red-700">{{ $message }}</p>@enderror
-            </div>
+            @if ($order->status === \App\Models\Order::STATUS_QUOTE_REQUESTED || $order->quoted_total !== null)
+                <div>
+                    <label class="block text-sm font-medium" for="quoted_total">Quoted total <span class="font-normal text-gray-500">(required when sending a quote)</span></label>
+                    <input class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="quoted_total" name="quoted_total" type="number" min="0.01" max="99999999.99" step="0.01" value="{{ old('quoted_total', $order->quoted_total) }}">
+                    @error('quoted_total')<p class="mt-1 text-sm text-red-700">{{ $message }}</p>@enderror
+                </div>
+            @endif
             <div>
                 <label class="block text-sm font-medium" for="admin_note">Update for customer</label>
                 <textarea class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="admin_note" name="admin_note" rows="3" maxlength="5000">{{ old('admin_note', $order->admin_note) }}</textarea>

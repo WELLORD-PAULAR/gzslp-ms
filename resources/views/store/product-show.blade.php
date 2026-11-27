@@ -8,7 +8,7 @@
     @endphp
     <section class="max-w-6xl">
         <a class="text-sm underline" href="{{ route('products.index') }}">Back to products</a>
-        <p class="mt-5 text-sm font-semibold uppercase text-emerald-800">Printed product</p>
+        <p class="mt-5 text-sm font-semibold uppercase text-[#008da5]">Printed product</p>
         <h1 class="mt-2 text-3xl font-semibold">{{ $product->name }}</h1>
         <p class="mt-2 text-sm text-gray-500">{{ \Illuminate\Support\Str::headline($product->category) }}</p>
         @if ($product->description)<p class="mt-4 text-gray-600">{{ $product->description }}</p>@endif
@@ -26,7 +26,7 @@
             </div>
 
             <div class="gz-panel h-fit p-5">
-                <p class="text-sm font-semibold uppercase text-emerald-800">Order this print</p>
+                <p class="text-sm font-semibold uppercase text-[#008da5]">Order this print</p>
                 @error('quantity')<p class="mt-3 text-sm text-red-800" role="alert">{{ $message }}</p>@enderror
                 <form class="mt-4 space-y-4" method="POST" action="{{ route('cart.items.store') }}">
                     @csrf
@@ -40,7 +40,7 @@
                         <label class="block text-sm font-medium" for="quantity">Quantity</label>
                         <input class="mt-1 w-24 rounded border border-gray-300 px-3 py-2" id="quantity" name="quantity" type="number" min="1" max="99" value="1" required>
                     </div>
-                    <button class="w-full rounded bg-emerald-800 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-50" type="submit" @disabled(! $hasAvailableVariant)>Add to cart</button>
+                    <button class="gz-btn gz-btn-cyan w-full disabled:cursor-not-allowed disabled:opacity-50" type="submit" @disabled(! $hasAvailableVariant)>Add to cart</button>
                 </form>
                 @unless($hasAvailableVariant)<p class="mt-3 text-sm text-red-700">All options are currently out of stock.</p>@endunless
             </div>

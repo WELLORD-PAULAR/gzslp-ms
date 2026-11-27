@@ -7,9 +7,11 @@ use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Models\Product;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 class ProductController extends Controller
 {
@@ -19,7 +21,7 @@ class ProductController extends Controller
     public function index(): View
     {
         return view('admin.products.index', [
-            'products' => Product::with('variants.supplies')->latest()->get(),
+            'products' => Product::with('variants.supplies')->latest()->paginate(25),
         ]);
     }
 
@@ -45,7 +47,7 @@ class ProductController extends Controller
             $data['paper_finish'] = null;
         }
         $data['is_active'] = $request->boolean('is_active');
-        $data['image_path'] = $request->file('image')?->store('products', 'public');
+        $data['image_path'] = $this->storeImage($request, 'products');
 
         $product = Product::create($data);
 
@@ -76,7 +78,7 @@ class ProductController extends Controller
             $data['paper_finish'] = null;
         }
         $data['is_active'] = $request->boolean('is_active');
-        $newImagePath = $request->file('image')?->store('products', 'public');
+        $newImagePath = $this->storeImage($request, 'products');
 
         if ($newImagePath !== null) {
             $data['image_path'] = $newImagePath;
@@ -121,5 +123,30 @@ class ProductController extends Controller
         $product->delete();
 
         return redirect()->route('admin.products.index')->with('status', 'Product deleted.');
+    }
+
+    private function storeImage(Request $request, string $directory): ?string
+    {
+        $file = $request->file('image');
+
+        if (! $file) {
+            return null;
+        }
+
+        try {
+            $path = $file->store($directory, 'public');
+        } catch (Throwable) {
+            throw ValidationException::withMessages([
+                'image' => 'The image could not be saved. Check that the storage folder is writable and try again.',
+            ]);
+        }
+
+        if ($path === false) {
+            throw ValidationException::withMessages([
+                'image' => 'The image could not be saved. Check that the storage folder is writable and try again.',
+            ]);
+        }
+
+        return $path;
     }
 }

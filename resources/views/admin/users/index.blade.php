@@ -11,7 +11,7 @@
         <a class="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white" href="{{ route('admin.users.create') }}">Create account</a>
     </div>
 
-    @if (session('status'))<p class="mt-5 border-l-4 border-emerald-700 bg-white px-4 py-3 text-sm" role="status">{{ session('status') }}</p>@endif
+    @if (session('status'))<p class="mt-5 border-l-4 border-cyan-500 bg-white px-4 py-3 text-sm" role="status">{{ session('status') }}</p>@endif
     @error('account')<p class="mt-5 border-l-4 border-red-700 bg-white px-4 py-3 text-sm text-red-800" role="alert">{{ $message }}</p>@enderror
 
     <form class="mt-6 flex flex-wrap items-end gap-3 print:hidden" method="GET" action="{{ route('admin.users.index') }}">
@@ -53,5 +53,8 @@
         </table>
     </div>
 
-    <div class="mt-5">{{ $users->links() }}</div>
+    <div class="mt-5">
+        {{ $users->links() }}
+        @include('partials.pagination-status', ['paginator' => $users])
+    </div>
 @endsection

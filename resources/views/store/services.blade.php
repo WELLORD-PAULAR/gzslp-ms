@@ -24,7 +24,7 @@
 
     <section class="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6" aria-label="Available services">
         @forelse ($services as $service)
-            <article class="flex flex-col overflow-hidden rounded border border-gray-200 bg-white transition hover:border-emerald-700 hover:shadow-sm">
+            <article class="flex flex-col overflow-hidden rounded border border-gray-200 bg-white transition hover:border-[#008da5] hover:shadow-sm">
                 <a class="block bg-gray-50" href="{{ route('services.show', $service) }}">
                     @if ($service->image_path)
                         <img class="aspect-square w-full object-cover" src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($service->image_path) }}" alt="{{ $service->name }}">
@@ -33,18 +33,22 @@
                     @endif
                 </a>
                 <div class="flex flex-1 flex-col gap-1 p-2">
-                    <h2 class="line-clamp-2 text-xs leading-snug text-gray-800"><a class="hover:text-emerald-800 hover:underline" href="{{ route('services.show', $service) }}">{{ $service->name }}</a></h2>
+                    <h2 class="line-clamp-2 text-xs leading-snug text-gray-800"><a class="hover:text-[#008da5] hover:underline" href="{{ route('services.show', $service) }}">{{ $service->name }}</a></h2>
                     @if ($service->description)
                         <p class="line-clamp-2 text-[10px] leading-snug text-gray-500">{{ $service->description }}</p>
                     @endif
                     <p class="mt-auto pt-1 text-sm font-bold text-[#008da5]">{{ $service->starting_price === null ? 'Request a quote' : 'From '.number_format((float) $service->starting_price, 2) }}</p>
-                    <form class="mt-1 flex items-end gap-1" method="POST" action="{{ route('cart.items.store') }}">
+                    <form class="mt-1 grid grid-cols-1 gap-1.5" method="POST" action="{{ route('cart.items.store') }}">
                         @csrf
                         <input name="item_type" type="hidden" value="service">
                         <input name="item_id" type="hidden" value="{{ $service->id }}">
                         <label class="text-[10px] text-gray-500" for="quantity-{{ $service->id }}">Qty</label>
-                        <input class="w-14 rounded border border-gray-300 px-2 py-1 text-center text-sm" id="quantity-{{ $service->id }}" name="quantity" type="number" min="1" max="99" value="1" required>
-                        <button class="rounded bg-[#008da5] px-1.5 py-0.5 text-[9px] font-semibold leading-tight text-white hover:bg-[#006f83]" type="submit">{{ $service->starting_price === null ? 'Add for quote' : 'Add to cart' }}</button>
+                        <div class="gz-qty-stepper gz-qty-stepper-touch gz-qty-stepper-card" data-qty-stepper>
+                            <button class="gz-qty-step" type="button" data-qty-step="-1" aria-label="Decrease quantity for {{ $service->name }}" aria-controls="quantity-{{ $service->id }}">−</button>
+                            <input class="gz-qty-input" id="quantity-{{ $service->id }}" name="quantity" type="number" min="1" max="99" value="1" required>
+                            <button class="gz-qty-step" type="button" data-qty-step="1" aria-label="Increase quantity for {{ $service->name }}" aria-controls="quantity-{{ $service->id }}">+</button>
+                        </div>
+                        <button class="flex w-full items-center justify-center rounded bg-[#008da5] px-2 py-1.5 text-center text-[11px] font-semibold leading-tight text-white hover:bg-[#006f83]" type="submit">{{ $service->starting_price === null ? 'Add for quote' : 'Add to cart' }}</button>
                     </form>
                 </div>
             </article>

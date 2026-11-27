@@ -2,10 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\ExplainsUploadErrors;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreServiceRequest extends FormRequest
 {
+    use ExplainsUploadErrors;
+
     public function authorize(): bool
     {
         return $this->user()?->can('manage-shop') ?? false;
@@ -20,5 +23,11 @@ class StoreServiceRequest extends FormRequest
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'is_active' => ['sometimes', 'boolean'],
         ];
+    }
+
+    /** @return array<string, string> */
+    public function messages(): array
+    {
+        return $this->uploadMessages();
     }
 }

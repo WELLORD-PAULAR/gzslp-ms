@@ -99,13 +99,17 @@ test('customers can search active services and visit service details', function 
         ->get(route('services', ['search' => 'poster']))
         ->assertOk()
         ->assertSee('Custom poster printing')
-        ->assertDontSee('Hidden lamination');
+        ->assertDontSee('Hidden lamination')
+        ->assertSee('data-qty-step="-1"', false)
+        ->assertSee('data-qty-step="1"', false);
 
     $this->get(route('services.show', $service))
         ->assertOk()
         ->assertSee('Send artwork for a custom poster.')
         ->assertSee('Price provided by quote')
-        ->assertSee('Request a quote');
+        ->assertSee('Request a quote')
+        ->assertSee('data-qty-step="-1"', false)
+        ->assertSee('data-qty-step="1"', false);
 });
 
 test('guests and customers cannot access admin catalog endpoints while employees can', function () {

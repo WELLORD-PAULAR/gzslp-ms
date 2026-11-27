@@ -4,12 +4,12 @@
 
 @section('content')
     <section>
-        <p class="text-sm font-semibold uppercase text-emerald-800">Your order</p>
+        <p class="text-sm font-semibold uppercase text-[#008da5]">Your order</p>
         <h1 class="mt-2 text-3xl font-semibold">Shopping cart</h1>
     </section>
 
     @if (session('status'))
-        <p class="mt-5 border-l-4 border-emerald-700 bg-white px-4 py-3 text-sm" role="status">{{ session('status') }}</p>
+        <p class="mt-5 border-l-4 border-cyan-500 bg-white px-4 py-3 text-sm" role="status">{{ session('status') }}</p>
     @endif
 
     @if ($errors->has('cart') || $errors->has('quantity'))
@@ -24,7 +24,7 @@
         <section class="mt-8 border-y border-gray-200 py-8">
             <p class="text-gray-600">Your cart is empty.</p>
             <div class="mt-5 flex flex-wrap gap-3">
-                <a class="inline-flex rounded bg-emerald-800 px-4 py-2 font-medium text-white hover:bg-emerald-900" href="{{ route('products.index') }}">Browse products</a>
+                <a class="gz-btn gz-btn-cyan" href="{{ route('products.index') }}">Browse products</a>
                 <a class="inline-flex rounded border border-gray-300 px-4 py-2 font-medium hover:bg-white" href="{{ route('services') }}">Browse services</a>
             </div>
         </section>
@@ -63,7 +63,7 @@
 
                         <div class="mt-5 flex flex-wrap items-end justify-between gap-4">
                             @if ($item->is_available)
-                                <form class="flex items-end gap-2" method="POST" action="{{ route('cart.items.update', $item) }}">
+                                <form class="gz-quantity-form" method="POST" action="{{ route('cart.items.update', $item) }}">
                                     @csrf
                                     @method('PATCH')
                                     <div>
@@ -112,7 +112,7 @@
                         <input class="mt-2 block w-full text-sm" id="artwork" name="artwork" type="file" accept="image/jpeg,image/png,application/pdf">
                         @error('artwork')<p class="mt-1 text-sm text-red-700">{{ $message }}</p>@enderror
                         @error('cart') <p class="mt-2 text-sm text-red-700">{{ $message }}</p> @enderror
-                        <button class="mt-4 w-full rounded bg-emerald-800 px-4 py-2 font-medium text-white hover:bg-emerald-900" type="submit">{{ $requiresQuote ? 'Request a quote' : 'Place order' }}</button>
+                        <button class="gz-btn gz-btn-cyan mt-4 w-full" type="submit">{{ $requiresQuote ? 'Request a quote' : 'Place order' }}</button>
                     </form>
                 @endif
             </aside>

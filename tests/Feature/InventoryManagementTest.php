@@ -169,7 +169,7 @@ test('staff can create and deactivate suppliers without deleting supplier histor
         ->post(route('admin.suppliers.store'), [
             'name' => 'Blank Apparel Co.',
             'email' => 'supplies@example.com',
-            'phone' => '5550100',
+            'phone' => 5550100,
             'address' => 'Warehouse 1',
             'is_active' => '1',
         ])
@@ -189,7 +189,7 @@ test('staff can create and deactivate suppliers without deleting supplier histor
     $this->put(route('admin.suppliers.update', $supplier), [
         'name' => 'Blank Apparel Co.',
         'email' => 'supplies@example.com',
-        'phone' => '5550100',
+        'phone' => 5550100,
         'address' => 'Warehouse 1',
         'is_active' => '0',
     ])->assertRedirect(route('admin.suppliers.index'));

@@ -2,12 +2,15 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\ExplainsPhoneErrors;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class StoreManagedUserRequest extends FormRequest
 {
+    use ExplainsPhoneErrors;
+
     public function authorize(): bool
     {
         return $this->user()?->can('access-admin') ?? false;
@@ -18,10 +21,16 @@ class StoreManagedUserRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'phone' => ['nullable', 'string', 'max:25'],
+            'phone' => ['nullable', 'integer', 'digits_between:7,15'],
             'role' => ['required', Rule::in([User::ROLE_CUSTOMER, User::ROLE_EMPLOYEE, User::ROLE_ADMIN])],
             'is_active' => ['required', 'boolean'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ];
+    }
+
+    /** @return array<string, string> */
+    public function messages(): array
+    {
+        return $this->phoneMessages();
     }
 }

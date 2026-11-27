@@ -67,6 +67,18 @@ class Order extends Model
         ], true);
     }
 
+    public function requiresQuote(): bool
+    {
+        if (in_array($this->status, [self::STATUS_QUOTE_REQUESTED, self::STATUS_QUOTE_SENT], true)
+            || $this->quoted_total !== null) {
+            return true;
+        }
+
+        return $this->relationLoaded('items')
+            ? $this->items->contains(fn (OrderItem $item): bool => $item->unit_price === null)
+            : $this->items()->whereNull('unit_price')->exists();
+    }
+
     public function allowedAdminStatuses(): array
     {
         return match ($this->status) {

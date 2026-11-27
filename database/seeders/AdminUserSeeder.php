@@ -14,6 +14,8 @@ class AdminUserSeeder extends Seeder
         $password = config('admin.password');
 
         if (! $name || ! $email || ! $password) {
+            $this->command?->warn('Admin credentials are not configured. Set ADMIN_* in .env or run php artisan app:create-admin.');
+
             return;
         }
 
@@ -21,6 +23,8 @@ class AdminUserSeeder extends Seeder
         $user->name = $name;
         $user->password = $password;
         $user->role = User::ROLE_ADMIN;
+        $user->is_active = true;
+        $user->email_verified_at ??= now();
         $user->save();
     }
 }

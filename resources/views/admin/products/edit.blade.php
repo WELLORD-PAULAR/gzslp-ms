@@ -6,7 +6,7 @@
     <section class="max-w-2xl">
         <a class="text-sm underline" href="{{ route('admin.products.index') }}">Back to products</a>
         <h1 class="mt-3 text-3xl font-semibold">Edit product</h1>
-        <form class="mt-7" method="POST" action="{{ route('admin.products.update', $product) }}" enctype="multipart/form-data">
+        <form class="mt-7" method="POST" action="{{ route('admin.products.update', $product) }}" enctype="multipart/form-data" onsubmit="return window.confirm('Save these product changes?')">
             @csrf
             @method('PUT')
             @include('admin.products._form')

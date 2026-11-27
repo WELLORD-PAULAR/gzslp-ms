@@ -18,8 +18,9 @@
                     <a class="gz-btn gz-btn-primary" href="{{ route('products.index') }}">Explore products <span aria-hidden="true">→</span></a>
                     <a class="gz-btn border border-white/25 bg-white/10 text-white hover:bg-white/15" href="{{ route('services') }}">View services</a>
                 @else
-                    <a class="gz-btn gz-btn-primary" href="{{ route('login') }}">Start your order <span aria-hidden="true">→</span></a>
+                    <a class="gz-btn gz-btn-primary" href="{{ route('login') }}">Sign in to browse <span aria-hidden="true">→</span></a>
                     <a class="gz-btn border border-white/25 bg-white/10 text-white hover:bg-white/15" href="{{ route('register') }}">Create an account</a>
+                    <p class="w-full text-sm text-gray-400">An account is required to browse the catalog, request quotes, and place orders.</p>
                 @endauth
             </div>
             <div class="mt-10 flex flex-wrap gap-x-7 gap-y-3 text-xs font-bold uppercase tracking-wider text-gray-400">
@@ -35,7 +36,7 @@
                 <img class="aspect-square w-full rounded-[1.2rem] object-contain" src="{{ asset('images/graphic-zone-logo.jpg') }}" alt="Graphic Zone Printing Services">
                 <div class="flex items-center justify-between px-3 py-3 text-gray-900">
                     <div><p class="text-xs font-black uppercase tracking-[.18em] text-gray-400">Graphic Zone</p><p class="mt-1 text-lg font-black">Print your creativity.</p></div>
-                    <a class="rounded-full bg-[#ffe52b] px-3 py-2 text-xs font-black" href="{{ route('login') }}">LET'S GO!</a>
+                    <a class="rounded-full bg-[#ffe52b] px-3 py-2 text-xs font-black" href="{{ route('login') }}">SIGN IN</a>
                 </div>
             </div>
         </div>

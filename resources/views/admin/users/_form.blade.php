@@ -10,9 +10,10 @@
         @error('email')<p class="mt-1 text-sm text-red-700">{{ $message }}</p>@enderror
     </div>
     <div>
-        <label class="block text-sm font-medium" for="phone">Phone number</label>
-        <input class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="phone" name="phone" type="tel" value="{{ old('phone', $managedUser->phone) }}" maxlength="25">
-        @error('phone')<p class="mt-1 text-sm text-red-700">{{ $message }}</p>@enderror
+        <label class="block text-sm font-medium" for="phone">Phone number <span class="font-normal text-gray-500">(digits only)</span></label>
+        <input class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="phone" name="phone" type="number" inputmode="numeric" min="1000000" max="999999999999999" value="{{ old('phone', $managedUser->phone) }}">
+        <p class="mt-1 text-xs text-gray-500">Use 7 to 15 digits, without spaces or symbols.</p>
+        @error('phone')<p class="mt-1 text-sm text-red-700" role="alert">{{ $message }}</p>@enderror
     </div>
     <div>
         <label class="block text-sm font-medium" for="role">Role</label>

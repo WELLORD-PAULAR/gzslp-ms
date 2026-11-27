@@ -12,7 +12,7 @@
         <a class="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white" href="{{ route('admin.products.variants.create', $product) }}">Add option</a>
     </div>
 
-    @if(session('status'))<p class="mt-5 border-l-4 border-emerald-700 bg-white px-4 py-3 text-sm" role="status">{{ session('status') }}</p>@endif
+    @if(session('status'))<p class="mt-5 border-l-4 border-cyan-500 bg-white px-4 py-3 text-sm" role="status">{{ session('status') }}</p>@endif
     @error('variant')<p class="mt-5 border-l-4 border-red-700 bg-white px-4 py-3 text-sm text-red-800" role="alert">{{ $message }}</p>@enderror
 
     <div class="mt-7 overflow-x-auto border-y border-gray-200 bg-white"><table class="w-full min-w-[44rem] text-left text-sm"><thead class="border-b border-gray-200 text-gray-500"><tr><th class="px-4 py-3 font-medium">Option</th><th class="px-4 py-3 font-medium">Price</th><th class="px-4 py-3 font-medium">Supply recipe</th><th class="px-4 py-3 font-medium">Inventory</th><th class="px-4 py-3 font-medium">Status</th><th class="px-4 py-3 text-right font-medium">Action</th></tr></thead><tbody class="divide-y divide-gray-100">

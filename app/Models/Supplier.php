@@ -18,6 +18,7 @@ class Supplier extends Model
     protected function casts(): array
     {
         return [
+            'phone' => 'integer',
             'is_active' => 'boolean',
         ];
     }

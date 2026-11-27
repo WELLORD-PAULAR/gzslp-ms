@@ -46,7 +46,7 @@
         <div><p class="text-sm text-gray-500">Orders submitted</p><p class="mt-1 text-2xl font-semibold">{{ $statusCounts->sum() }}</p></div>
         <div><p class="text-sm text-gray-500">Completed orders</p><p class="mt-1 text-2xl font-semibold">{{ $completedOrderCount }}</p></div>
         <div><p class="text-sm text-gray-500">Completed order value</p><p class="mt-1 text-2xl font-semibold">{{ number_format((float) $completedOrderValue, 2) }}</p><p class="mt-1 text-xs text-gray-500">Not payment-verified revenue</p></div>
-        <div><p class="text-sm text-gray-500">Quote requests</p><p class="mt-1 text-2xl font-semibold">{{ $statusCounts->get('quote_requested', 0) }}</p></div>
+        <div><p class="text-sm text-gray-500">Orders requiring a quote</p><p class="mt-1 text-2xl font-semibold">{{ $quoteRequestCount }}</p><p class="mt-1 text-xs text-gray-500">Includes quote-sent, accepted, and cancelled quote orders.</p></div>
     </section>
 
     <section class="mt-8 grid gap-8 lg:grid-cols-[16rem_1fr]">
@@ -65,7 +65,7 @@
                 <div class="flex justify-between gap-4 py-2"><dt>Active services</dt><dd class="font-medium">{{ $catalogCounts['active_services'] }}</dd></div>
                 <div class="flex justify-between gap-4 py-2"><dt>Hidden services</dt><dd class="font-medium">{{ $catalogCounts['hidden_services'] }}</dd></div>
             </dl>
-            <p class="mt-3 text-xs text-gray-500">This is catalog visibility, not stock inventory. Inventory quantities are not tracked yet.</p>
+            <p class="mt-3 text-xs text-gray-500">This is catalog visibility, not stock inventory. Current quantities are tracked on the Inventory screen.</p>
         </div>
 
         <div>
@@ -82,7 +82,7 @@
                                 <td class="px-3 py-3">{{ $order->user->name }}</td>
                                 <td class="px-3 py-3">{{ $order->created_at->format('M j, Y') }}</td>
                                 <td class="px-3 py-3">{{ $statusLabels[$order->status] ?? $order->status }}</td>
-                                <td class="px-3 py-3 text-right">{{ $order->current_total === null ? 'Quote pending' : number_format((float) $order->current_total, 2) }}</td>
+                                <td class="px-3 py-3 text-right">{{ $order->requiresQuote() && $order->current_total === null ? 'Quote pending' : number_format((float) $order->current_total, 2) }}</td>
                             </tr>
                         @empty
                             <tr><td class="px-3 py-8 text-center text-gray-500" colspan="5">No orders in this period.</td></tr>
@@ -90,7 +90,10 @@
                     </tbody>
                 </table>
             </div>
-            <div class="mt-4 print:hidden">{{ $orders->links() }}</div>
+            <div class="mt-4 print:hidden">
+                {{ $orders->links() }}
+                @include('partials.pagination-status', ['paginator' => $orders])
+            </div>
         </div>
     </section>
 @endsection

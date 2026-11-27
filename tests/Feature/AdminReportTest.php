@@ -43,7 +43,8 @@ test('an admin can filter an order activity report and see honest order metrics'
         ->assertSee('Not payment-verified revenue')
         ->assertSee('55.00')
         ->assertSee('Quote requested')
-        ->assertSee('This is catalog visibility, not stock inventory.')
+        ->assertSee('Orders requiring a quote')
+        ->assertSee('Current quantities are tracked on the Inventory screen.')
         ->assertSee('Active products')
         ->assertDontSee('100.00');
 });

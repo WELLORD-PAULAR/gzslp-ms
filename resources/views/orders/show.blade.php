@@ -7,7 +7,7 @@
         <a class="text-sm underline" href="{{ route('orders.index') }}">Back to your orders</a>
         <div class="mt-4 flex flex-wrap items-center justify-between gap-4">
             <div>
-                <p class="text-sm font-semibold uppercase text-emerald-800">Order details</p>
+                <p class="text-sm font-semibold uppercase text-[#008da5]">Order details</p>
                 <h1 class="mt-2 text-3xl font-semibold">Order #{{ $order->id }}</h1>
                 <p class="mt-2 text-sm text-gray-600">Submitted {{ $order->created_at->format('M j, Y g:i A') }}</p>
             </div>
@@ -16,7 +16,7 @@
     </section>
 
     @if (session('status'))
-        <p class="mt-5 border-l-4 border-emerald-700 bg-white px-4 py-3 text-sm" role="status">{{ session('status') }}</p>
+        <p class="mt-5 border-l-4 border-cyan-500 bg-white px-4 py-3 text-sm" role="status">{{ session('status') }}</p>
     @endif
     @if ($errors->has('order'))
         <p class="mt-5 border-l-4 border-red-700 bg-white px-4 py-3 text-sm text-red-800" role="alert">{{ $errors->first('order') }}</p>
@@ -40,10 +40,14 @@
     </section>
 
     <section class="mt-6 ml-auto max-w-sm border-y border-gray-200 py-5">
-        @if ($order->status === \App\Models\Order::STATUS_QUOTE_REQUESTED)
-            <p class="text-sm text-gray-600">The shop is preparing a quote. Your pre-quote subtotal is {{ number_format((float) $order->subtotal, 2) }}.</p>
+        @if ($order->requiresQuote())
+            @if ($order->status === \App\Models\Order::STATUS_QUOTE_REQUESTED)
+                <p class="text-sm text-gray-600">The shop is preparing a quote. Your pre-quote subtotal is {{ number_format((float) $order->subtotal, 2) }}.</p>
+            @else
+                <p class="flex justify-between font-semibold"><span>Quoted total</span><span>{{ number_format((float) $order->current_total, 2) }}</span></p>
+            @endif
         @else
-            <p class="flex justify-between font-semibold"><span>{{ $order->status === \App\Models\Order::STATUS_QUOTE_SENT ? 'Quoted total' : 'Order total' }}</span><span>{{ number_format((float) $order->current_total, 2) }}</span></p>
+            <p class="flex justify-between font-semibold"><span>Order total</span><span>{{ number_format((float) $order->current_total, 2) }}</span></p>
         @endif
         @if ($order->customer_note)<p class="mt-4 text-sm text-gray-600"><span class="font-medium">Your note:</span> {{ $order->customer_note }}</p>@endif
         @if ($order->admin_note)<p class="mt-3 text-sm text-gray-600"><span class="font-medium">Shop update:</span> {{ $order->admin_note }}</p>@endif
@@ -56,7 +60,7 @@
                 <form method="POST" action="{{ route('orders.accept-quote', $order) }}" onsubmit="return window.confirm('Accept this quote and start order processing?')">
                     @csrf
                     @method('PATCH')
-                    <button class="rounded bg-emerald-800 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-900" type="submit">Accept quote</button>
+                    <button class="gz-btn gz-btn-cyan" type="submit">Accept quote</button>
                 </form>
             @endif
             <form method="POST" action="{{ route('orders.cancel', $order) }}" onsubmit="return window.confirm('Cancel this order?')">

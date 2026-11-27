@@ -7,6 +7,24 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## Graphic Zone local setup
+
+```bash
+cp .env.example .env
+php artisan key:generate
+php artisan migrate
+php artisan app:create-admin
+npm install
+npm run build
+php artisan serve
+```
+
+`app:create-admin` prompts for the administrator name, email, and password, and can also be run with `--name`, `--email`, and `--password` options. Alternatively, fill in the `ADMIN_*` values in `.env` and run `php artisan migrate --seed`; `AdminUserSeeder` will create the same account.
+
+The example environment uses `MAIL_MAILER=log`, so verification and password-reset links are written to `storage/logs/laravel.log` for local QA. Update `APP_URL` to match the host you serve the app on.
+
+To see multi-page admin listings during local QA, run `php artisan db:seed --class=PaginationDemoSeeder`. It adds clearly labeled demo accounts, catalog records, inventory items, orders, and movement history without touching the administrator account. Remove them with `php artisan app:clear-pagination-demo`.
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:

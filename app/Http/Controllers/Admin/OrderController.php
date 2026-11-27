@@ -25,7 +25,7 @@ class OrderController extends Controller
     public function show(Order $order): View
     {
         $order->load(['user', 'items']);
-        $allowedStatuses = $order->allowedAdminStatuses();
+        $allowedStatuses = auth()->user()->can('access-admin') ? $order->allowedAdminStatuses() : [];
 
         return view('admin.orders.show', compact('order', 'allowedStatuses'));
     }

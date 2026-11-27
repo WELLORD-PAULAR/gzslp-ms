@@ -41,8 +41,11 @@
             @php
                 $hasTrackedVariant = $product->variants->contains(fn ($variant) => $variant->availableQuantity() !== null);
                 $hasAvailableVariant = $product->variants->contains(fn ($variant) => $variant->availableQuantity() === null || $variant->availableQuantity() > 0);
+                $paperWeight = $product->paper_weight
+                    ? trim(preg_replace('/\s*gsm$/i', '', (string) $product->paper_weight)).' gsm'
+                    : null;
             @endphp
-            <article class="flex flex-col overflow-hidden rounded border border-gray-200 bg-white transition hover:border-emerald-700 hover:shadow-sm">
+            <article class="flex flex-col overflow-hidden rounded border border-gray-200 bg-white transition hover:border-[#008da5] hover:shadow-sm">
                 <a class="block bg-gray-50" href="{{ route('products.show', $product) }}">
                     @if ($product->image_path)
                         <img class="aspect-square w-full object-cover" src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($product->image_path) }}" alt="{{ $product->name }}">
@@ -51,19 +54,19 @@
                     @endif
                 </a>
                 <div class="flex flex-1 flex-col gap-1 p-2">
-                    <h2 class="line-clamp-2 text-xs leading-snug text-gray-800"><a class="hover:text-emerald-800 hover:underline" href="{{ route('products.show', $product) }}">{{ $product->name }}</a></h2>
+                    <h2 class="line-clamp-2 text-xs leading-snug text-gray-800"><a class="hover:text-[#008da5] hover:underline" href="{{ route('products.show', $product) }}">{{ $product->name }}</a></h2>
                     @if ($product->category)
                         <p class="truncate text-[10px] uppercase tracking-wide text-gray-400">{{ \Illuminate\Support\Str::headline($product->category) }}</p>
                     @endif
                     @if ($product->paper_size || $product->paper_weight || $product->paper_finish)
                         <p class="truncate text-[10px] text-gray-500">
                             @if ($product->paper_size){{ $product->paper_size }}@endif
-                            @if ($product->paper_weight)<span class="mx-0.5">&middot;</span>{{ $product->paper_weight }}gsm @endif
+                            @if ($paperWeight)<span class="mx-0.5">&middot;</span>{{ $paperWeight }} @endif
                             @if ($product->paper_finish)<span class="mx-0.5">&middot;</span>{{ $product->paper_finish }}@endif
                         </p>
                     @endif
                     <p class="mt-auto pt-1 text-sm font-bold text-[#008da5]">From {{ number_format((float) $product->variants->min('price'), 2) }}</p>
-                    <p class="text-[10px] {{ $hasAvailableVariant ? 'text-emerald-700' : 'font-medium text-red-700' }}">
+                    <p class="text-[10px] {{ $hasAvailableVariant ? 'text-[#008da5]' : 'font-medium text-red-700' }}">
                         {{ ! $hasTrackedVariant ? 'Inventory not tracked' : ($hasAvailableVariant ? 'Available' : 'Out of stock') }}
                     </p>
                     <a class="mt-1 rounded bg-[#008da5] px-2 py-1 text-center text-[10px] font-semibold text-white hover:bg-[#006f83]" href="{{ route('products.show', $product) }}">Choose options</a>

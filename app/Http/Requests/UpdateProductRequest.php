@@ -2,11 +2,14 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\ExplainsUploadErrors;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class UpdateProductRequest extends FormRequest
 {
+    use ExplainsUploadErrors;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -29,5 +32,11 @@ class UpdateProductRequest extends FormRequest
             'lock_version' => ['required', 'integer', 'min:0'],
             'is_active' => ['sometimes', 'boolean'],
         ];
+    }
+
+    /** @return array<string, string> */
+    public function messages(): array
+    {
+        return $this->uploadMessages();
     }
 }

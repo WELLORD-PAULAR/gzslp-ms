@@ -5,7 +5,7 @@
 @section('content')
     <section class="max-w-2xl">
         <a class="text-sm underline" href="{{ route('account.dashboard') }}">Back to account</a>
-        <p class="mt-4 text-sm font-semibold uppercase text-emerald-800">Account settings</p>
+        <p class="mt-4 text-sm font-semibold uppercase text-[#008da5]">Account settings</p>
         <h1 class="mt-2 text-3xl font-semibold">Personal details</h1>
 
         <form class="mt-6 space-y-5 border-y border-gray-200 py-6" method="POST" action="{{ route('account.update') }}">
@@ -22,11 +22,12 @@
                 @error('email')<p class="mt-1 text-sm text-red-700">{{ $message }}</p>@enderror
             </div>
             <div>
-                <label class="block text-sm font-medium" for="phone">Phone number</label>
-                <input class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="phone" name="phone" type="tel" value="{{ old('phone', $user->phone) }}" autocomplete="tel" maxlength="25">
-                @error('phone')<p class="mt-1 text-sm text-red-700">{{ $message }}</p>@enderror
+                <label class="block text-sm font-medium" for="phone">Phone number <span class="font-normal text-gray-500">(digits only)</span></label>
+                <input class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="phone" name="phone" type="number" inputmode="numeric" min="1000000" max="999999999999999" value="{{ old('phone', $user->phone) }}" autocomplete="tel">
+                <p class="mt-1 text-xs text-gray-500">Use 7 to 15 digits, without spaces or symbols.</p>
+                @error('phone')<p class="mt-1 text-sm text-red-700" role="alert">{{ $message }}</p>@enderror
             </div>
-            <button class="rounded bg-emerald-800 px-4 py-2 text-sm font-medium text-white" type="submit">Save profile</button>
+            <button class="gz-btn gz-btn-cyan" type="submit">Save profile</button>
         </form>
 
         <h2 class="mt-10 text-xl font-semibold">Change password</h2>

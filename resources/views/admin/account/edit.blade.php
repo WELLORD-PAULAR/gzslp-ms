@@ -10,7 +10,7 @@
 
         @if (session('status'))<p class="gz-panel mt-5 border-l-4 border-cyan-500 px-4 py-3 text-sm" role="status">{{ session('status') }}</p>@endif
 
-        <form class="mt-6 space-y-5 border-y border-gray-200 py-6" method="POST" action="{{ route('admin.account.update') }}">
+        <form class="mt-6 space-y-5 border-y border-gray-200 py-6" method="POST" action="{{ route('admin.account.update') }}" onsubmit="return window.confirm('Save these profile changes?')">
             @csrf
             @method('PATCH')
             <div>
@@ -24,15 +24,16 @@
                 @error('email')<p class="mt-1 text-sm text-red-700">{{ $message }}</p>@enderror
             </div>
             <div>
-                <label class="block text-sm font-medium" for="phone">Phone number</label>
-                <input class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="phone" name="phone" type="tel" value="{{ old('phone', $user->phone) }}" autocomplete="tel" maxlength="25">
-                @error('phone')<p class="mt-1 text-sm text-red-700">{{ $message }}</p>@enderror
+                <label class="block text-sm font-medium" for="phone">Phone number <span class="font-normal text-gray-500">(digits only)</span></label>
+                <input class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="phone" name="phone" type="number" inputmode="numeric" min="1000000" max="999999999999999" value="{{ old('phone', $user->phone) }}" autocomplete="tel">
+                <p class="mt-1 text-xs text-gray-500">Use 7 to 15 digits, without spaces or symbols.</p>
+                @error('phone')<p class="mt-1 text-sm text-red-700" role="alert">{{ $message }}</p>@enderror
             </div>
             <button class="gz-btn gz-btn-primary" type="submit">Save profile</button>
         </form>
 
         <h2 class="mt-10 text-xl font-semibold" id="change-password">Change password</h2>
-        <form class="mt-5 space-y-5 border-y border-gray-200 py-6" method="POST" action="{{ route('admin.account.password.update') }}">
+        <form class="mt-5 space-y-5 border-y border-gray-200 py-6" method="POST" action="{{ route('admin.account.password.update') }}" onsubmit="return window.confirm('Change your password now?')">
             @csrf
             @method('PATCH')
             <div>

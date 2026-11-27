@@ -11,7 +11,7 @@ test('a visitor can register and is signed in', function () {
     $response = $this->post(route('register.store'), [
         'name' => 'Test Customer',
         'email' => 'customer@example.com',
-        'phone' => '+1 555 0100',
+        'phone' => 15550100,
         'password' => 'password123',
         'password_confirmation' => 'password123',
         'role' => User::ROLE_ADMIN,
@@ -21,7 +21,7 @@ test('a visitor can register and is signed in', function () {
     $this->assertAuthenticated();
     $this->assertDatabaseHas('users', [
         'email' => 'customer@example.com',
-        'phone' => '+1 555 0100',
+        'phone' => 15550100,
         'role' => User::ROLE_CUSTOMER,
     ]);
     expect(Hash::check('password123', User::first()->password))->toBeTrue();
@@ -63,7 +63,7 @@ test('customers cannot access the admin dashboard', function () {
         ->get(route('admin.dashboard'))
         ->assertForbidden();
 
-    $this->get(route('home'))->assertOk()->assertSee('Make it yours');
+    $this->get(route('home'))->assertOk()->assertSee('stand out.');
     $this->get(route('account.dashboard'))->assertOk();
 });
 
@@ -92,6 +92,21 @@ test('the admin seeder creates an administrator from configured credentials', fu
     $admin = User::where('email', 'admin@example.com')->firstOrFail();
 
     expect($admin->isAdmin())->toBeTrue();
+    expect(Hash::check('admin-password-123', $admin->password))->toBeTrue();
+});
+
+test('the create admin command bootstraps an active administrator', function () {
+    $this->artisan('app:create-admin', [
+        '--name' => 'Shop Admin',
+        '--email' => 'admin@example.com',
+        '--password' => 'admin-password-123',
+    ])->assertSuccessful();
+
+    $admin = User::where('email', 'admin@example.com')->firstOrFail();
+
+    expect($admin->isAdmin())->toBeTrue();
+    expect($admin->isActive())->toBeTrue();
+    expect($admin->hasVerifiedEmail())->toBeTrue();
     expect(Hash::check('admin-password-123', $admin->password))->toBeTrue();
 });
 
