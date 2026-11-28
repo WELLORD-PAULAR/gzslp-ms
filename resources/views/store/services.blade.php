@@ -38,26 +38,17 @@
                         <p class="line-clamp-2 text-[10px] leading-snug text-gray-500">{{ $service->description }}</p>
                     @endif
                     <p class="mt-auto pt-1 text-sm font-bold text-[#008da5]">{{ $service->starting_price === null ? 'Request a quote' : 'From '.number_format((float) $service->starting_price, 2) }}</p>
-<<<<<<< HEAD
                     <form class="mt-1 grid grid-cols-1 gap-1.5" method="POST" action="{{ route('cart.items.store') }}">
-=======
-                    <form class="mt-1 grid grid-cols-[auto_minmax(0,1fr)] items-end gap-1" method="POST" action="{{ route('cart.items.store') }}">
->>>>>>> 5a919e28acce8756fd5f3c90182d2171bfa4ec11
                         @csrf
                         <input name="item_type" type="hidden" value="service">
                         <input name="item_id" type="hidden" value="{{ $service->id }}">
                         <label class="text-[10px] text-gray-500" for="quantity-{{ $service->id }}">Qty</label>
-<<<<<<< HEAD
                         <div class="gz-qty-stepper gz-qty-stepper-touch gz-qty-stepper-card" data-qty-stepper>
                             <button class="gz-qty-step" type="button" data-qty-step="-1" aria-label="Decrease quantity for {{ $service->name }}" aria-controls="quantity-{{ $service->id }}">−</button>
                             <input class="gz-qty-input" id="quantity-{{ $service->id }}" name="quantity" type="number" min="1" max="99" value="1" required>
                             <button class="gz-qty-step" type="button" data-qty-step="1" aria-label="Increase quantity for {{ $service->name }}" aria-controls="quantity-{{ $service->id }}">+</button>
                         </div>
                         <button class="flex w-full items-center justify-center rounded bg-[#008da5] px-2 py-1.5 text-center text-[11px] font-semibold leading-tight text-white hover:bg-[#006f83]" type="submit">{{ $service->starting_price === null ? 'Add for quote' : 'Add to cart' }}</button>
-=======
-                        <input class="w-full rounded border border-gray-300 px-2 py-1 text-center text-sm" id="quantity-{{ $service->id }}" name="quantity" type="number" min="1" max="99" value="1" required>
-                        <button class="col-span-2 rounded bg-[#008da5] px-1.5 py-0.5 text-[9px] font-semibold leading-tight text-white hover:bg-[#006f83]" type="submit">{{ $service->starting_price === null ? 'Add for quote' : 'Add to cart' }}</button>
->>>>>>> 5a919e28acce8756fd5f3c90182d2171bfa4ec11
                     </form>
                 </div>
             </article>

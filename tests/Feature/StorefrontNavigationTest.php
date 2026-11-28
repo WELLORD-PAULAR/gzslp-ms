@@ -15,11 +15,7 @@ test('the storefront navigation links to home, services, and cart', function () 
         ->assertDontSee('>Products</a>', false)
         ->assertDontSee('>Cart ', false)
         ->assertSee(route('login'), false)
-<<<<<<< HEAD
         ->assertSee('Sign in to browse')
-=======
-        ->assertSee('Start your order')
->>>>>>> 5a919e28acce8756fd5f3c90182d2171bfa4ec11
         ->assertSee(route('register'), false);
 });
 
@@ -47,11 +43,7 @@ test('a signed-in customer can see and visit services and cart', function () {
         ->assertSee(route('products.index'), false)
         ->assertSee(route('services'), false)
         ->assertSee(route('cart'), false)
-<<<<<<< HEAD
         ->assertSee('Browse the catalog');
-=======
-        ->assertSee('Explore products');
->>>>>>> 5a919e28acce8756fd5f3c90182d2171bfa4ec11
 
     Service::create(['name' => 'Custom artwork print']);
     Product::create(['name' => 'A4 matte print', 'price' => 12.50]);

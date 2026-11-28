@@ -31,11 +31,7 @@
         </div>
     </header>
     <div class="gz-admin-shell">
-<<<<<<< HEAD
-        <aside class="gz-sidebar" id="workspace-navigation" data-mobile-nav>
-=======
         <aside class="gz-sidebar hidden" id="admin-sidebar" data-menu-panel>
->>>>>>> 5a919e28acce8756fd5f3c90182d2171bfa4ec11
             <p class="gz-side-label">Workspace</p>
             <nav aria-label="Workspace navigation">
                 <a class="gz-side-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" href="{{ route('admin.dashboard') }}"><span>▦</span> Overview</a>

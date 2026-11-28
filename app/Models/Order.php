@@ -76,7 +76,6 @@ class Order extends Model
         ], true);
     }
 
-<<<<<<< HEAD
     public function requiresQuote(): bool
     {
         if (in_array($this->status, [self::STATUS_QUOTE_REQUESTED, self::STATUS_QUOTE_SENT], true)
@@ -87,7 +86,8 @@ class Order extends Model
         return $this->relationLoaded('items')
             ? $this->items->contains(fn (OrderItem $item): bool => $item->unit_price === null)
             : $this->items()->whereNull('unit_price')->exists();
-=======
+    }
+
     public function isAwaitingQuote(): bool
     {
         return $this->status === self::STATUS_QUOTE_REQUESTED;
@@ -96,7 +96,6 @@ class Order extends Model
     public function hasQuote(): bool
     {
         return $this->quoted_total !== null;
->>>>>>> 5a919e28acce8756fd5f3c90182d2171bfa4ec11
     }
 
     public function allowedAdminStatuses(): array

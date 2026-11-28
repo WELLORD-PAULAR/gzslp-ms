@@ -21,11 +21,7 @@ class StoreManagedUserRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-<<<<<<< HEAD
-            'phone' => ['nullable', 'integer', 'digits_between:7,15'],
-=======
             'phone' => ['nullable', 'digits_between:7,15'],
->>>>>>> 5a919e28acce8756fd5f3c90182d2171bfa4ec11
             'role' => ['required', Rule::in([User::ROLE_CUSTOMER, User::ROLE_EMPLOYEE, User::ROLE_ADMIN])],
             'is_active' => ['required', 'boolean'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],

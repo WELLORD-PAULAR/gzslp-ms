@@ -11,11 +11,7 @@ test('a visitor can register and is signed in', function () {
     $response = $this->post(route('register.store'), [
         'name' => 'Test Customer',
         'email' => 'customer@example.com',
-<<<<<<< HEAD
         'phone' => 15550100,
-=======
-        'phone' => '15550100',
->>>>>>> 5a919e28acce8756fd5f3c90182d2171bfa4ec11
         'password' => 'password123',
         'password_confirmation' => 'password123',
         'role' => User::ROLE_ADMIN,
@@ -25,11 +21,7 @@ test('a visitor can register and is signed in', function () {
     $this->assertAuthenticated();
     $this->assertDatabaseHas('users', [
         'email' => 'customer@example.com',
-<<<<<<< HEAD
         'phone' => 15550100,
-=======
-        'phone' => '15550100',
->>>>>>> 5a919e28acce8756fd5f3c90182d2171bfa4ec11
         'role' => User::ROLE_CUSTOMER,
     ]);
     expect(Hash::check('password123', User::first()->password))->toBeTrue();
@@ -71,11 +63,7 @@ test('customers cannot access the admin dashboard', function () {
         ->get(route('admin.dashboard'))
         ->assertForbidden();
 
-<<<<<<< HEAD
     $this->get(route('home'))->assertOk()->assertSee('stand out.');
-=======
-    $this->get(route('home'))->assertOk()->assertSee('Your project, your way.');
->>>>>>> 5a919e28acce8756fd5f3c90182d2171bfa4ec11
     $this->get(route('account.dashboard'))->assertOk();
 });
 

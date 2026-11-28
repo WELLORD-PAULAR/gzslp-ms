@@ -23,11 +23,7 @@ test('a customer can update personal details and change password', function () {
     $this->patch(route('account.update'), [
         'name' => 'Updated Customer',
         'email' => 'new@example.com',
-<<<<<<< HEAD
         'phone' => 639123456789,
-=======
-        'phone' => '639123456789',
->>>>>>> 5a919e28acce8756fd5f3c90182d2171bfa4ec11
     ])->assertRedirect(route('account.dashboard'));
 
     expect($customer->fresh()->name)->toBe('Updated Customer')
@@ -79,11 +75,7 @@ test('an employee can update their own details and change password from the work
     $this->patch(route('admin.account.update'), [
         'name' => 'Updated Employee',
         'email' => 'employee-new@example.com',
-<<<<<<< HEAD
         'phone' => 639170000000,
-=======
-        'phone' => '639170000000',
->>>>>>> 5a919e28acce8756fd5f3c90182d2171bfa4ec11
     ])->assertRedirect(route('admin.account.dashboard'));
 
     expect($employee->fresh()->name)->toBe('Updated Employee')
