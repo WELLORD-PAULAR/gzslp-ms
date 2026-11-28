@@ -32,4 +32,39 @@
             <a class="gz-panel group p-5 hover:-translate-y-1 hover:shadow-lg" href="{{ route('admin.users.index') }}"><span class="text-2xl">♙</span><h2 class="mt-4 text-lg font-black group-hover:text-cyan-800">Accounts</h2><p class="mt-1 text-sm text-gray-500">Manage administrator, employee, and customer accounts.</p><span class="mt-4 inline-block text-sm font-extrabold text-cyan-800">Manage accounts →</span></a>
         @endcan
     </section>
+
+    <section class="mt-10">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+            <div>
+                <p class="gz-eyebrow">Latest activity</p>
+                <h2 class="mt-2 text-2xl font-black">Recent orders</h2>
+            </div>
+            <a class="text-sm font-bold underline" href="{{ route('admin.orders.index') }}">View all orders →</a>
+        </div>
+        <div class="gz-panel mt-4 overflow-x-auto">
+            <table class="w-full min-w-[36rem] text-left text-sm">
+                <thead class="border-b border-gray-200 text-gray-500">
+                    <tr>
+                        <th class="px-4 py-3 font-medium">Order</th>
+                        <th class="px-4 py-3 font-medium">Customer</th>
+                        @can('access-admin')<th class="px-4 py-3 font-medium">Status</th>@endcan
+                        <th class="px-4 py-3 text-right font-medium">Total</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    @forelse ($recentOrders as $order)
+                        <tr>
+                            <td class="px-4 py-3"><a class="font-medium underline" href="{{ route('admin.orders.show', $order) }}">#{{ $order->id }}</a></td>
+                            <td class="px-4 py-3">{{ $order->user->name }}</td>
+                            @can('access-admin')<td class="px-4 py-3">@include('orders._status', ['order' => $order])</td>@endcan
+                            <td class="px-4 py-3 text-right">{{ $order->current_total === null ? 'Quote pending' : number_format((float) $order->current_total, 2) }}</td>
+                        </tr>
+                    @empty
+                        <tr><td class="px-4 py-8 text-center text-gray-500" colspan="{{ auth()->user()->can('access-admin') ? 4 : 3 }}">No orders yet.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-4">{{ $recentOrders->links() }}</div>
+    </section>
 @endsection

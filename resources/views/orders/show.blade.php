@@ -34,12 +34,13 @@
                     @endif
                     <p class="mt-2 text-sm text-gray-600">Quantity: {{ $item->quantity }}</p>
                 </div>
-                <p class="font-medium">{{ $item->unit_price === null ? 'Quote required' : number_format((float) $item->line_total, 2) }}</p>
+                <p class="font-medium">{{ $item->unit_price === null ? ($order->isAwaitingQuote() ? 'Quote required' : 'Included in quote') : number_format((float) $item->line_total, 2) }}</p>
             </article>
         @endforeach
     </section>
 
     <section class="mt-6 ml-auto max-w-sm border-y border-gray-200 py-5">
+<<<<<<< HEAD
         @if ($order->requiresQuote())
             @if ($order->status === \App\Models\Order::STATUS_QUOTE_REQUESTED)
                 <p class="text-sm text-gray-600">The shop is preparing a quote. Your pre-quote subtotal is {{ number_format((float) $order->subtotal, 2) }}.</p>
@@ -48,6 +49,12 @@
             @endif
         @else
             <p class="flex justify-between font-semibold"><span>Order total</span><span>{{ number_format((float) $order->current_total, 2) }}</span></p>
+=======
+        @if ($order->isAwaitingQuote())
+            <p class="text-sm text-gray-600">The shop is preparing a quote. Your pre-quote subtotal is {{ number_format((float) $order->subtotal, 2) }}.</p>
+        @else
+            <p class="flex justify-between font-semibold"><span>{{ $order->hasQuote() ? 'Quoted total' : 'Order total' }}</span><span>{{ number_format((float) $order->current_total, 2) }}</span></p>
+>>>>>>> 5a919e28acce8756fd5f3c90182d2171bfa4ec11
         @endif
         @if ($order->customer_note)<p class="mt-4 text-sm text-gray-600"><span class="font-medium">Your note:</span> {{ $order->customer_note }}</p>@endif
         @if ($order->admin_note)<p class="mt-3 text-sm text-gray-600"><span class="font-medium">Shop update:</span> {{ $order->admin_note }}</p>@endif

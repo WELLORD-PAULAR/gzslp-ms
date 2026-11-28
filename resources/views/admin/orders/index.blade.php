@@ -11,7 +11,17 @@
     <div class="mt-7 overflow-x-auto border-y border-gray-200 bg-white">
         <table class="w-full min-w-[42rem] text-left text-sm">
             <thead class="border-b border-gray-200 text-gray-500">
+<<<<<<< HEAD
                 <tr><th class="px-4 py-3 font-medium">Order</th><th class="px-4 py-3 font-medium">Customer</th><th class="px-4 py-3 font-medium">Submitted</th>@can('access-admin')<th class="px-4 py-3 font-medium">Status</th>@endcan<th class="px-4 py-3 text-right font-medium">Total</th></tr>
+=======
+                <tr>
+                    <th class="px-4 py-3 font-medium">Order</th>
+                    <th class="px-4 py-3 font-medium">Customer</th>
+                    <th class="px-4 py-3 font-medium">Submitted</th>
+                    @can('access-admin')<th class="px-4 py-3 font-medium">Status</th>@endcan
+                    <th class="px-4 py-3 text-right font-medium">Total</th>
+                </tr>
+>>>>>>> 5a919e28acce8756fd5f3c90182d2171bfa4ec11
             </thead>
             <tbody class="divide-y divide-gray-100">
                 @forelse ($orders as $order)
@@ -20,7 +30,11 @@
                         <td class="px-4 py-3">{{ $order->user->name }}<span class="mt-1 block text-gray-500">{{ $order->user->email }}</span></td>
                         <td class="px-4 py-3">{{ $order->created_at->format('M j, Y') }}</td>
                         @can('access-admin')<td class="px-4 py-3">@include('orders._status', ['order' => $order])</td>@endcan
+<<<<<<< HEAD
                         <td class="px-4 py-3 text-right">{{ $order->requiresQuote() && $order->current_total === null ? 'Quote pending' : number_format((float) $order->current_total, 2) }}</td>
+=======
+                        <td class="px-4 py-3 text-right">{{ $order->isAwaitingQuote() ? 'Quote pending' : number_format((float) $order->current_total, 2) }}</td>
+>>>>>>> 5a919e28acce8756fd5f3c90182d2171bfa4ec11
                     </tr>
                 @empty
                     <tr><td class="px-4 py-8 text-center text-gray-500" colspan="{{ auth()->user()->can('access-admin') ? 5 : 4 }}">No orders have been submitted.</td></tr>
@@ -29,8 +43,13 @@
         </table>
     </div>
 
+<<<<<<< HEAD
     <div class="mt-5">
         {{ $orders->links() }}
         @include('partials.pagination-status', ['paginator' => $orders])
     </div>
 @endsection
+=======
+    <div class="mt-5">{{ $orders->links() }}</div>
+@endsection
+>>>>>>> 5a919e28acce8756fd5f3c90182d2171bfa4ec11

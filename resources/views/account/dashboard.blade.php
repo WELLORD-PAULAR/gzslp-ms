@@ -9,10 +9,11 @@
         <p class="mt-2 text-gray-500">Your Graphic Zone account, profile, and print orders in one place.</p>
     </section>
     @if (session('status'))<p class="gz-panel mb-5 border-l-4 border-cyan-500 px-4 py-3 text-sm" role="status">{{ session('status') }}</p>@endif
-    @if (! auth()->user()->hasVerifiedEmail())
+    @if (! auth()->user()->hasVerifiedEmail() || ! auth()->user()->hasVerifiedPhone())
         <div class="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
-            <p class="font-bold">Your email address is not verified.</p>
-            <form class="mt-2" method="POST" action="{{ route('verification.send') }}">@csrf<button class="font-bold underline" type="submit">Resend verification email</button></form>
+            <p class="font-bold">Verify your contact details.</p>
+            <p class="mt-1">Use the six-digit code we sent you to confirm each contact.</p>
+            <a class="mt-2 inline-block font-bold underline" href="{{ route('verification.notice') }}">Enter your verification code →</a>
         </div>
     @endif
     <div class="grid gap-5 lg:grid-cols-[1fr_1.2fr]">
@@ -22,6 +23,8 @@
                 <div><dt class="text-xs font-black uppercase tracking-wider text-gray-400">Full name</dt><dd class="mt-1 font-bold">{{ auth()->user()->name }}</dd></div>
                 <div><dt class="text-xs font-black uppercase tracking-wider text-gray-400">Email address</dt><dd class="mt-1 font-bold">{{ auth()->user()->email }}</dd></div>
                 <div><dt class="text-xs font-black uppercase tracking-wider text-gray-400">Phone number</dt><dd class="mt-1 font-bold">{{ auth()->user()->phone ?: 'Not provided' }}</dd></div>
+                <div><dt class="text-xs font-black uppercase tracking-wider text-gray-400">Email verification</dt><dd class="mt-1 font-bold">{{ auth()->user()->hasVerifiedEmail() ? 'Verified' : 'Pending' }}</dd></div>
+                <div><dt class="text-xs font-black uppercase tracking-wider text-gray-400">Phone verification</dt><dd class="mt-1 font-bold">{{ auth()->user()->hasVerifiedPhone() ? 'Verified' : (auth()->user()->phone ? 'Pending' : 'Not applicable') }}</dd></div>
             </dl>
             <a class="gz-btn gz-btn-outline mt-7 w-full" href="{{ route('account.edit') }}">Edit account details</a>
         </section>
@@ -34,7 +37,11 @@
             <div class="mt-8 rounded-xl bg-[#171923] p-5 text-white">
                 <p class="text-xs font-black uppercase tracking-[.18em] text-cyan-300">Order center</p>
                 <p class="mt-2 text-lg font-extrabold">Your orders, all in one place.</p>
-                <a class="gz-btn gz-btn-primary mt-4" href="{{ route('orders.index') }}">View my orders →</a>
+                @if (auth()->user()->isStaff() && ! auth()->user()->isPreviewingStorefront())
+                    <a class="gz-btn gz-btn-primary mt-4" href="{{ route('admin.orders.index') }}">View the order queue →</a>
+                @else
+                    <a class="gz-btn gz-btn-primary mt-4" href="{{ route('orders.index') }}">View my orders →</a>
+                @endif
             </div>
         </section>
     </div>

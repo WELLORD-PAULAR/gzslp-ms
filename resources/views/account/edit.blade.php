@@ -22,10 +22,16 @@
                 @error('email')<p class="mt-1 text-sm text-red-700">{{ $message }}</p>@enderror
             </div>
             <div>
+<<<<<<< HEAD
                 <label class="block text-sm font-medium" for="phone">Phone number <span class="font-normal text-gray-500">(digits only)</span></label>
                 <input class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="phone" name="phone" type="number" inputmode="numeric" min="1000000" max="999999999999999" value="{{ old('phone', $user->phone) }}" autocomplete="tel">
                 <p class="mt-1 text-xs text-gray-500">Use 7 to 15 digits, without spaces or symbols.</p>
                 @error('phone')<p class="mt-1 text-sm text-red-700" role="alert">{{ $message }}</p>@enderror
+=======
+                <label class="block text-sm font-medium" for="phone">Phone number</label>
+                <input class="mt-1 w-full rounded border border-gray-300 px-3 py-2" id="phone" name="phone" type="tel" inputmode="numeric" pattern="[0-9]{7,15}" value="{{ old('phone', $user->phone) }}" autocomplete="tel" placeholder="639175550101">
+                @error('phone')<p class="mt-1 text-sm text-red-700">{{ $message }}</p>@enderror
+>>>>>>> 5a919e28acce8756fd5f3c90182d2171bfa4ec11
             </div>
             <button class="gz-btn gz-btn-cyan" type="submit">Save profile</button>
         </form>

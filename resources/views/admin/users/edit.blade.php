@@ -8,7 +8,11 @@
         <h1 class="mt-3 text-3xl font-semibold">Manage account</h1>
         <p class="mt-2 text-sm text-gray-600">Created {{ $managedUser->created_at->format('M j, Y') }}. Deactivated accounts and their order history are retained.</p>
         @error('account')<p class="mt-5 border-l-4 border-red-700 bg-white px-4 py-3 text-sm text-red-800" role="alert">{{ $message }}</p>@enderror
+<<<<<<< HEAD
         <form class="mt-7" method="POST" action="{{ route('admin.users.update', $managedUser) }}" onsubmit="return window.confirm('Save these account changes?')">
+=======
+        <form class="mt-7" method="POST" action="{{ route('admin.users.update', $managedUser) }}" onsubmit="return window.confirm('Save changes to this account?')">
+>>>>>>> 5a919e28acce8756fd5f3c90182d2171bfa4ec11
             @csrf
             @method('PUT')
             @include('admin.users._form')

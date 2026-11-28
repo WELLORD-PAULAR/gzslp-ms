@@ -90,11 +90,7 @@
 
                         <div class="mt-5 flex flex-wrap items-end justify-between gap-4">
                             @if ($item->is_available)
-                                <form
-                                    class="grid grid-cols-[auto_auto] items-end gap-x-2 gap-y-1"
-                                    method="POST"
-                                    action="{{ route('cart.items.update', $item) }}"
-                                >
+                                <form class="flex items-end gap-2" method="POST" action="{{ route('cart.items.update', $item) }}">
                                     @csrf
                                     @method('PATCH')
 
@@ -194,11 +190,7 @@
                         <span class="font-semibold">{{ number_format($totalCents / 100, 2) }}</span>
                     </p>
                 @endif
-
-                <p class="mt-5 border-t border-gray-200 pt-4 text-xs text-gray-500">
-                    Order requests are submitted without payment. Payment checkout is not available yet.
-                </p>
-
+                <p class="mt-5 border-t border-gray-200 pt-4 text-xs text-gray-500">Order requests are submitted without payment. Payment checkout is not available yet.</p>
                 @if (! $hasUnavailableItems)
                     <form
                         class="mt-5 border-t border-gray-200 pt-5"
@@ -207,48 +199,14 @@
                         enctype="multipart/form-data"
                     >
                         @csrf
-
-                        <label class="block text-sm font-medium" for="customer_note">
-                            Note for the shop
-                            <span class="font-normal text-gray-500">(optional)</span>
-                        </label>
-
-                        <textarea
-                            class="mt-2 w-full rounded border border-gray-300 px-3 py-2 text-sm"
-                            id="customer_note"
-                            name="customer_note"
-                            rows="3"
-                            maxlength="5000"
-                        >{{ old('customer_note') }}</textarea>
-
-                        @error('customer_note')
-                            <p class="mt-1 text-sm text-red-700">{{ $message }}</p>
-                        @enderror
-
-                        <label class="mt-4 block text-sm font-medium" for="artwork">
-                            Attach custom artwork
-                            <span class="font-normal text-gray-500">(JPG, PNG or PDF, up to 10 MB)</span>
-                        </label>
-
-                        <input
-                            class="mt-2 block w-full text-sm"
-                            id="artwork"
-                            name="artwork"
-                            type="file"
-                            accept="image/jpeg,image/png,application/pdf"
-                        >
-
-                        @error('artwork')
-                            <p class="mt-1 text-sm text-red-700">{{ $message }}</p>
-                        @enderror
-
-                        @error('cart')
-                            <p class="mt-2 text-sm text-red-700">{{ $message }}</p>
-                        @enderror
-
-                        <button class="gz-btn gz-btn-cyan mt-4 w-full" type="submit">
-                            {{ $requiresQuote ? 'Request a quote' : 'Place order' }}
-                        </button>
+                        <label class="block text-sm font-medium" for="customer_note">Note for the shop <span class="font-normal text-gray-500">(optional)</span></label>
+                        <textarea class="mt-2 w-full rounded border border-gray-300 px-3 py-2 text-sm" id="customer_note" name="customer_note" rows="3" maxlength="5000">{{ old('customer_note') }}</textarea>
+                        @error('customer_note') <p class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror
+                        <label class="mt-4 block text-sm font-medium" for="artwork">Attach custom artwork <span class="font-normal text-gray-500">(JPG, PNG or PDF, up to 10 MB)</span></label>
+                        <input class="mt-2 block w-full text-sm" id="artwork" name="artwork" type="file" accept="image/jpeg,image/png,application/pdf">
+                        @error('artwork')<p class="mt-1 text-sm text-red-700">{{ $message }}</p>@enderror
+                        @error('cart') <p class="mt-2 text-sm text-red-700">{{ $message }}</p> @enderror
+                        <button class="mt-4 w-full rounded bg-emerald-800 px-4 py-2 font-medium text-white hover:bg-emerald-900" type="submit">{{ $requiresQuote ? 'Request a quote' : 'Place order' }}</button>
                     </form>
                 @endif
             </aside>

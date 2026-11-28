@@ -6,7 +6,11 @@
     <section class="max-w-2xl">
         <a class="text-sm underline" href="{{ route('admin.services.index') }}">Back to services</a>
         <h1 class="mt-3 text-3xl font-semibold">Edit service</h1>
+<<<<<<< HEAD
         <form class="mt-7" method="POST" action="{{ route('admin.services.update', $service) }}" enctype="multipart/form-data" onsubmit="return window.confirm('Save these service changes?')">
+=======
+        <form class="mt-7" method="POST" action="{{ route('admin.services.update', $service) }}" enctype="multipart/form-data" onsubmit="return window.confirm('Save changes to this service?')">
+>>>>>>> 5a919e28acce8756fd5f3c90182d2171bfa4ec11
             @csrf
             @method('PUT')
             @include('admin.services._form')

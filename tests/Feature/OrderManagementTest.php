@@ -198,6 +198,27 @@ test('only admins can access the order management queue', function () {
     $this->actingAs($admin)->get(route('orders.index'))->assertForbidden();
 });
 
+test('employees can review orders but cannot change their status', function () {
+    $employee = User::factory()->create();
+    $employee->forceFill(['role' => User::ROLE_EMPLOYEE])->save();
+    $order = User::factory()->create()->orders()->create([
+        'status' => Order::STATUS_PENDING,
+        'subtotal' => '10.00',
+    ]);
+
+    $this->actingAs($employee)
+        ->get(route('admin.orders.index'))
+        ->assertOk()
+        ->assertDontSee('Next status');
+    $this->get(route('admin.orders.show', $order))
+        ->assertOk()
+        ->assertDontSee('Update order');
+    $this->patch(route('admin.orders.update', $order), ['status' => Order::STATUS_PROCESSING])
+        ->assertForbidden();
+
+    expect($order->fresh()->status)->toBe(Order::STATUS_PENDING);
+});
+
 test('an empty or unavailable cart cannot become an order', function () {
     $customer = User::factory()->create();
     $cart = $customer->cart()->create();

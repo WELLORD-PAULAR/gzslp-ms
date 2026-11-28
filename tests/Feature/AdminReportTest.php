@@ -40,7 +40,7 @@ test('an admin can filter an order activity report and see honest order metrics'
         ->assertOk()
         ->assertSee('Orders submitted')
         ->assertSee('Completed order value')
-        ->assertSee('Not payment-verified revenue')
+        ->assertSee('Based on completed orders')
         ->assertSee('55.00')
         ->assertSee('Quote requested')
         ->assertSee('Orders requiring a quote')

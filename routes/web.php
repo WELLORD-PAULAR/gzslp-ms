@@ -2,8 +2,7 @@
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
-use App\Http\Controllers\Auth\EmailVerificationPromptController;
-use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Http\Controllers\Auth\VerificationController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Admin\ProductController;
@@ -18,8 +17,10 @@ use App\Http\Controllers\Admin\ProductVariantController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\Service;
+use App\Models\VerificationCode;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -44,15 +45,14 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
-    Route::get('/email/verify', EmailVerificationPromptController::class)->name('verification.notice');
-    Route::get('/email/verify/{id}/{hash}', VerifyEmailController::class)
-        ->middleware(['signed', 'throttle:6,1'])
+    Route::get('/verify', [VerificationController::class, 'show'])->name('verification.notice');
+    Route::post('/verify/{channel}/send', [VerificationController::class, 'send'])
+        ->middleware('throttle:6,1')
+        ->whereIn('channel', [VerificationCode::CHANNEL_EMAIL, VerificationCode::CHANNEL_SMS])
+        ->name('verification.send');
+    Route::post('/verify/{channel}/verify', [VerificationController::class, 'verify'])
+        ->whereIn('channel', [VerificationCode::CHANNEL_EMAIL, VerificationCode::CHANNEL_SMS])
         ->name('verification.verify');
-    Route::post('/email/verification-notification', function (Illuminate\Http\Request $request) {
-        $request->user()->sendEmailVerificationNotification();
-
-        return back()->with('status', 'A new verification link has been sent.');
-    })->middleware('throttle:6,1')->name('verification.send');
 
     Route::middleware('can:access-active-account')->group(function () {
     Route::get('/products', function () {
@@ -131,7 +131,11 @@ Route::middleware('auth')->group(function () {
 
     Route::prefix('admin')->name('admin.')->middleware('can:manage-shop')->group(function () {
         Route::get('/dashboard', function () {
-            return view('admin.dashboard');
+            $recentOrders = Order::with('user')
+                ->latest()
+                ->paginate(10, ['*'], 'orders_page');
+
+            return view('admin.dashboard', compact('recentOrders'));
         })->name('dashboard');
 
         Route::get('/account', [AdminAccountController::class, 'index'])->name('account.dashboard');
@@ -161,7 +165,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
         Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
         Route::get('/orders/{order}/artwork', [AdminOrderController::class, 'downloadArtwork'])->name('orders.artwork');
-        Route::patch('/orders/{order}', [AdminOrderController::class, 'update'])->name('orders.update');
         Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
         Route::get('/inventory/create', [InventoryController::class, 'create'])->name('inventory.create');
         Route::post('/inventory', [InventoryController::class, 'store'])->name('inventory.store');
@@ -171,6 +174,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/inventory/{inventoryItem}/movements', [InventoryController::class, 'recordMovement'])->name('inventory.movements.store');
         Route::resource('suppliers', SupplierController::class)->except('show');
         Route::middleware('can:access-admin')->group(function () {
+            Route::patch('/orders/{order}', [AdminOrderController::class, 'update'])->name('orders.update');
             Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
             Route::resource('users', AdminUserController::class)->except('show');
         });

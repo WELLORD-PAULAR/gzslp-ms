@@ -18,7 +18,7 @@
         <div>
             <p class="text-sm font-semibold uppercase text-gray-500">Reporting</p>
             <h1 class="mt-2 text-3xl font-semibold">Order activity</h1>
-            <p class="mt-2 text-sm text-gray-600">Completed order value is not verified revenue because payment processing is not enabled.</p>
+            <p class="mt-2 text-sm text-gray-600">Completed order value reflects priced orders marked complete in the selected period.</p>
         </div>
         <button class="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium print:hidden" type="button" onclick="window.print()">Print report</button>
     </section>
@@ -32,7 +32,15 @@
             <label class="block text-sm font-medium" for="date_to">To</label>
             <input class="mt-1 rounded border border-gray-300 px-3 py-2" id="date_to" name="date_to" type="date" value="{{ $dateTo->toDateString() }}">
         </div>
-        <button class="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white" type="submit">Apply dates</button>
+        <div>
+            <label class="block text-sm font-medium" for="per_page">Rows per page</label>
+            <select class="mt-1 rounded border border-gray-300 px-3 py-2" id="per_page" name="per_page">
+                @foreach ([10, 25, 50, 100] as $size)
+                    <option value="{{ $size }}" @selected((int) request('per_page', 25) === $size)>{{ $size }}</option>
+                @endforeach
+            </select>
+        </div>
+        <button class="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white" type="submit">Apply filters</button>
         <a class="px-2 py-2 text-sm underline" href="{{ route('admin.reports.index') }}">This month</a>
     </form>
 
@@ -45,8 +53,13 @@
     <section class="mt-5 grid gap-5 border-y border-gray-200 py-6 sm:grid-cols-2 lg:grid-cols-4" aria-label="Order summary">
         <div><p class="text-sm text-gray-500">Orders submitted</p><p class="mt-1 text-2xl font-semibold">{{ $statusCounts->sum() }}</p></div>
         <div><p class="text-sm text-gray-500">Completed orders</p><p class="mt-1 text-2xl font-semibold">{{ $completedOrderCount }}</p></div>
+<<<<<<< HEAD
         <div><p class="text-sm text-gray-500">Completed order value</p><p class="mt-1 text-2xl font-semibold">{{ number_format((float) $completedOrderValue, 2) }}</p><p class="mt-1 text-xs text-gray-500">Not payment-verified revenue</p></div>
         <div><p class="text-sm text-gray-500">Orders requiring a quote</p><p class="mt-1 text-2xl font-semibold">{{ $quoteRequestCount }}</p><p class="mt-1 text-xs text-gray-500">Includes quote-sent, accepted, and cancelled quote orders.</p></div>
+=======
+        <div><p class="text-sm text-gray-500">Completed order value</p><p class="mt-1 text-2xl font-semibold">{{ number_format((float) $completedOrderValue, 2) }}</p><p class="mt-1 text-xs text-gray-500">Based on completed orders</p></div>
+        <div><p class="text-sm text-gray-500">Quote requests</p><p class="mt-1 text-2xl font-semibold">{{ $statusCounts->get('quote_requested', 0) }}</p></div>
+>>>>>>> 5a919e28acce8756fd5f3c90182d2171bfa4ec11
     </section>
 
     <section class="mt-8 grid gap-8 lg:grid-cols-[16rem_1fr]">
@@ -65,7 +78,11 @@
                 <div class="flex justify-between gap-4 py-2"><dt>Active services</dt><dd class="font-medium">{{ $catalogCounts['active_services'] }}</dd></div>
                 <div class="flex justify-between gap-4 py-2"><dt>Hidden services</dt><dd class="font-medium">{{ $catalogCounts['hidden_services'] }}</dd></div>
             </dl>
+<<<<<<< HEAD
             <p class="mt-3 text-xs text-gray-500">This is catalog visibility, not stock inventory. Current quantities are tracked on the Inventory screen.</p>
+=======
+            <p class="mt-3 text-xs text-gray-500">This is catalog visibility, not stock inventory. Stock levels are tracked in the inventory workspace.</p>
+>>>>>>> 5a919e28acce8756fd5f3c90182d2171bfa4ec11
         </div>
 
         <div>

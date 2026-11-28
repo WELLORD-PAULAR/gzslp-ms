@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\VerificationCode;
+use App\Services\Verification\VerificationCodeService;
 use App\Http\Requests\UpdateAccountPasswordRequest;
 use App\Http\Requests\UpdateAccountRequest;
 use Illuminate\Http\RedirectResponse;
@@ -28,11 +30,21 @@ class AccountController extends Controller
         $user = $request->user();
         $data = $request->validated();
         $emailChanged = $data['email'] !== $user->email;
+        $phoneChanged = ($data['phone'] ?? null) !== $user->phone;
 
         $user->update($data);
 
         if ($emailChanged) {
             $user->forceFill(['email_verified_at' => null])->save();
+            app(VerificationCodeService::class)->send($user, VerificationCode::CHANNEL_EMAIL, true);
+        }
+
+        if ($phoneChanged) {
+            $user->forceFill(['phone_verified_at' => null])->save();
+
+            if (filled($user->phone)) {
+                app(VerificationCodeService::class)->send($user, VerificationCode::CHANNEL_SMS, true);
+            }
         }
 
         return redirect()->route('account.dashboard')->with('status', 'Account details updated.');

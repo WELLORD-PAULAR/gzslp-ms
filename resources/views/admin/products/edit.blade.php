@@ -6,7 +6,11 @@
     <section class="max-w-2xl">
         <a class="text-sm underline" href="{{ route('admin.products.index') }}">Back to products</a>
         <h1 class="mt-3 text-3xl font-semibold">Edit product</h1>
+<<<<<<< HEAD
         <form class="mt-7" method="POST" action="{{ route('admin.products.update', $product) }}" enctype="multipart/form-data" onsubmit="return window.confirm('Save these product changes?')">
+=======
+        <form class="mt-7" method="POST" action="{{ route('admin.products.update', $product) }}" enctype="multipart/form-data" onsubmit="return window.confirm('Save changes to this product?')">
+>>>>>>> 5a919e28acce8756fd5f3c90182d2171bfa4ec11
             @csrf
             @method('PUT')
             @include('admin.products._form')

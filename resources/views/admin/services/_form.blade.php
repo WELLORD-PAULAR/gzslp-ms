@@ -17,6 +17,7 @@
             <img class="mt-3 aspect-[4/3] w-48 rounded border border-gray-200 object-cover" src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($service->image_path) }}" alt="Current image for {{ $service->name }}">
         @endif
         <input class="mt-2 block w-full text-sm" id="image" name="image" type="file" accept="image/jpeg,image/png,image/webp">
+<<<<<<< HEAD
         <p class="mt-1 text-xs text-gray-500">If an upload is rejected, the exact reason appears below.</p>
         @error('image')
             <div class="mt-2 rounded border-l-4 border-red-700 bg-white px-3 py-2 text-sm text-red-800" role="alert">
@@ -24,6 +25,9 @@
                 <p>{{ $message }}</p>
             </div>
         @enderror
+=======
+        @error('image')<p class="mt-2 rounded border-l-4 border-red-700 bg-red-50 px-3 py-2 text-sm font-medium text-red-800" role="alert"><span class="font-bold">Image not uploaded:</span> {{ $message }}</p>@enderror
+>>>>>>> 5a919e28acce8756fd5f3c90182d2171bfa4ec11
     </div>
     <div>
         <label class="block text-sm font-medium" for="starting_price">Starting price (optional)</label>

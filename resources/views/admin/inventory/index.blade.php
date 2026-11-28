@@ -25,7 +25,7 @@
 
     <div class="mt-6 overflow-x-auto border-y border-gray-200 bg-white">
         <table class="w-full min-w-[44rem] text-left text-sm">
-            <thead class="border-b border-gray-200 text-gray-500"><tr><th class="px-4 py-3 font-medium">Supply</th><th class="px-4 py-3 font-medium">Category</th><th class="px-4 py-3 font-medium">On hand</th><th class="px-4 py-3 font-medium">Reorder at</th><th class="px-4 py-3 font-medium">Suppliers</th><th class="px-4 py-3 text-right font-medium">Status</th></tr></thead>
+            <thead class="border-b border-gray-200 text-gray-500"><tr><th class="px-4 py-3 font-medium">Supply</th><th class="px-4 py-3 font-medium">Catalog</th><th class="px-4 py-3 font-medium">On hand</th><th class="px-4 py-3 font-medium">Reorder at</th><th class="px-4 py-3 font-medium">Suppliers</th><th class="px-4 py-3 text-right font-medium">Status</th></tr></thead>
             <tbody class="divide-y divide-gray-100">
                 @forelse ($items as $item)
                     <tr>

@@ -2,12 +2,21 @@
 
 namespace App\Http\Requests;
 
+<<<<<<< HEAD
 use App\Http\Requests\Concerns\ExplainsUploadErrors;
+=======
+use App\Http\Requests\Concerns\HasImageValidationMessages;
+
+>>>>>>> 5a919e28acce8756fd5f3c90182d2171bfa4ec11
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreServiceRequest extends FormRequest
 {
+<<<<<<< HEAD
     use ExplainsUploadErrors;
+=======
+    use HasImageValidationMessages;
+>>>>>>> 5a919e28acce8756fd5f3c90182d2171bfa4ec11
 
     public function authorize(): bool
     {
@@ -25,9 +34,18 @@ class StoreServiceRequest extends FormRequest
         ];
     }
 
+<<<<<<< HEAD
     /** @return array<string, string> */
     public function messages(): array
     {
         return $this->uploadMessages();
+=======
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return $this->imageMessages();
+>>>>>>> 5a919e28acce8756fd5f3c90182d2171bfa4ec11
     }
 }
